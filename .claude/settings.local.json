@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm view:*)",
+      "Bash(npm search:*)",
+      "Bash(curl -s \"https://api.npmjs.org/downloads/point/last-week/@antv/g6\")",
+      "Bash(curl -s \"https://api.npmjs.org/downloads/point/last-week/cytoscape\")",
+      "Bash(curl -s \"https://api.npmjs.org/downloads/point/last-week/vis-network\")",
+      "Bash(curl -s \"https://api.npmjs.org/downloads/point/last-week/sigma\")",
+      "Bash(curl -s \"https://api.npmjs.org/downloads/point/last-week/@xyflow/react\")"
+    ]
+  }
+}

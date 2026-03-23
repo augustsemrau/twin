@@ -9,7 +9,7 @@ Twin is a Tauri 2.x desktop app that maintains a live, structured model of a kno
 ## Architecture
 
 - **Filesystem-canonical, graph-derived.** YAML and markdown files in `~/twin/` are the source of truth. The work graph is derived in-memory and never persisted separately.
-- **Structured data in YAML** (`tasks.yaml`, `deliveries.yaml`, `people.yaml`), **prose in markdown** (`decisions.md`, `notes/*.md`, `context.md`).
+- **Structured data in YAML** (`tasks.yaml`, `deliveries.yaml`, `decisions.yaml`, `people.yaml`), **prose in markdown** (`notes/*.md`, `context.md`).
 - **Every entity has a ULID.** References between entities use IDs, never display strings.
 - **All state changes go through typed delta operations** validated by the Validator and applied by the State Updater. No agent writes to canonical files directly.
 
@@ -20,10 +20,10 @@ Twin is a Tauri 2.x desktop app that maintains a live, structured model of a kno
 - **Graph viz:** @antv/g6 v5 (WebGL, force-directed, combo nodes)
 - **YAML:** eemeli/yaml (round-trip with comment preservation — comments above keys only, never inline)
 - **Frontmatter:** gray-matter
-- **Markdown:** marked
+- **Markdown:** markdown-it (CommonMark compliant, safe defaults)
 - **AI:** @anthropic-ai/sdk (Haiku 4.5 for Resolver/Planner/Reconciler, Sonnet 4.5 for Prioritiser/Composer)
 - **IDs:** ulid
-- **Fuzzy match:** fuse.js
+- **Fuzzy match:** uFuzzy (short-phrase matching, transparent scoring)
 - **Clipboard:** tauri-plugin-clipboard (CrossCopy)
 - **macOS permissions:** tauri-plugin-macos-permissions
 
@@ -53,7 +53,7 @@ Twin is a Tauri 2.x desktop app that maintains a live, structured model of a kno
         ├── context.md     # Background, client, goal, constraints
         ├── tasks.yaml     # Task list with ULIDs
         ├── deliveries.yaml
-        ├── decisions.md   # Append-only with active/superseded lifecycle
+        ├── decisions.yaml  # Decision log with active/superseded lifecycle
         └── notes/
 ```
 

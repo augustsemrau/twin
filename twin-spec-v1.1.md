@@ -205,7 +205,7 @@ Work state is not append-only forever. Decisions get superseded, projects get ar
     │   ├── context.md                     # Background: client, goal, constraints
     │   ├── tasks.yaml                     # Task list with status and deadlines
     │   ├── deliveries.yaml                # Delivery tracker
-    │   ├── decisions.md                   # Decision log with lifecycle status
+    │   ├── decisions.yaml                 # Decision log with lifecycle status
     │   └── notes/
     │       ├── 2026-03-17-tech-stack-decision.md
     │       ├── 2026-03-16-stakeholder-alignment.md
@@ -216,13 +216,13 @@ Work state is not append-only forever. Decisions get superseded, projects get ar
         ├── context.md
         ├── tasks.yaml
         ├── deliveries.yaml
-        ├── decisions.md
+        ├── decisions.yaml
         └── notes/
 ```
 
 ### Why this structure works for agents
 
-When you point Claude Code at `~/twin/projects/municipality-platform/`, it reads `CLAUDE.md` (the generated brief), `tasks.yaml` (what is in flight and blocked), `decisions.md` (what has been decided), and `notes/` (the thinking behind everything). The filenames are self-describing.
+When you point Claude Code at `~/twin/projects/municipality-platform/`, it reads `CLAUDE.md` (the generated brief), `tasks.yaml` (what is in flight and blocked), `decisions.yaml` (what has been decided), and `notes/` (the thinking behind everything). The filenames are self-describing.
 
 Git version control is free. Run `git init ~/twin/` and you get full history of every note, decision, and context change.
 
@@ -277,7 +277,7 @@ Decision needed by Friday EOD.
 |---|---|
 | `thought` | Raw idea, observation, or half-formed thinking |
 | `meeting` | Notes from a meeting, call, or structured conversation |
-| `decision` | A decision that was made — also appended to `decisions.md` |
+| `decision` | A decision that was made — also appended to `decisions.yaml` |
 | `reference` | Background material, constraints, client information |
 | `chat_learning` | Written back from a Claude Chat or AI conversation session |
 | `conversation` | Structured record of a real-world exchange with a colleague or client |
@@ -314,7 +314,7 @@ limited to 40GB due to shared workloads. Cost estimate will be ready Thursday EO
 - Can the cluster be dedicated during peak inference periods?
 ```
 
-When a conversation note is saved with content in "What was agreed," Twin proposes appending each item to `decisions.md`. The user toggles per item.
+When a conversation note is saved with content in "What was agreed," Twin proposes appending each item to `decisions.yaml`. The user toggles per item.
 
 ---
 
@@ -423,46 +423,49 @@ deliveries:
 
 ---
 
-### 6.6 Decisions log (`projects/[slug]/decisions.md`)
+### 6.6 Decisions (`projects/[slug]/decisions.yaml`)
 
 Decisions have a lifecycle: `active` → `superseded`. New decisions can explicitly supersede old ones. The Composer only includes `active` decisions in context packs by default.
 
-```markdown
+```yaml
 # Decisions — municipality-platform
+# Updated: 2026-03-17
 
-## 2026-03-17 — Data framework decision deferred
-_id: 01JBQFA1K2_
-_status: active_
+decisions:
+  - id: 01JBQFA1K2
+    title: Data framework decision deferred
+    status: active
+    date: 2026-03-17
+    decided_by: August
+    unblocks:
+      - 01JBQF3B2M
+    decision: No final decision on Polars vs Spark yet.
+    rationale: >
+      Blocked on infra cost estimate from Thomas. Decide by Friday EOD.
 
-**Decision:** No final decision on Polars vs Spark yet.
-**Rationale:** Blocked on infra cost estimate from Thomas. Decide by Friday EOD.
-**Unblocks:** 01JBQF3B2M (Architecture diagram)
-**Decided by:** August
+  - id: 01JBQFA2M3
+    title: On-premise inference confirmed
+    status: active
+    date: 2026-03-14
+    decided_by: August + client IT team
+    unblocks:
+      - 01JBQF3D4P
+    decision: All LLM inference will run on-prem on the client's H100 cluster.
+    rationale: >
+      Client data governance policy prohibits cloud inference.
 
----
-
-## 2026-03-14 — On-premise inference confirmed
-_id: 01JBQFA2M3_
-_status: active_
-
-**Decision:** All LLM inference will run on-prem on the client's H100 cluster.
-**Rationale:** Client data governance policy prohibits cloud inference.
-**Unblocks:** 01JBQF3D4P (Stakeholder alignment doc)
-**Decided by:** August + client IT team
-
----
-
-## 2026-03-10 — Cloud inference considered
-_id: 01JBQFA0J1_
-_status: superseded_
-_superseded_by: 01JBQFA2M3_
-
-**Decision:** Evaluate both cloud and on-prem inference.
-**Rationale:** Initial assumption before client data governance constraints were known.
-**Decided by:** August
-
----
+  - id: 01JBQFA0J1
+    title: Cloud inference considered
+    status: superseded
+    superseded_by: 01JBQFA2M3
+    date: 2026-03-10
+    decided_by: August
+    decision: Evaluate both cloud and on-prem inference.
+    rationale: >
+      Initial assumption before client data governance constraints were known.
 ```
+
+**Why YAML instead of markdown for decisions:** Decisions carry structured metadata (id, status, superseded_by, unblocks) that was previously embedded in markdown using a bespoke `_id: ..._` convention requiring regex parsing. YAML makes all fields first-class, simplifies the `supersede_decision` delta operation, and is consistent with tasks.yaml and deliveries.yaml. Multi-line rationale uses YAML block scalars (`>`). The generated CLAUDE.md renders decisions in human-friendly prose.
 
 **Lifecycle rules:**
 - New decisions default to `active`
@@ -506,7 +509,7 @@ solution architecture, and public sector technology.
 ## Instructions for all sessions
 - Read CLAUDE.md in the project folder before starting any task
 - Ask clarifying questions before executing if the task is ambiguous
-- Append decisions to decisions.md after the session — not to CLAUDE.md
+- Append decisions to decisions.yaml after the session — not to CLAUDE.md
 - Flag blockers and risks explicitly
 ```
 
@@ -553,9 +556,9 @@ Chase Thomas for the infra cost estimate, then complete the architecture diagram
 and slot it into section 2 of the Q2 pitch deck.
 
 ---
-_Source files: context.md · tasks.yaml · deliveries.yaml · decisions.md · notes/_
+_Source files: context.md · tasks.yaml · deliveries.yaml · decisions.yaml · notes/_
 _Do not edit this file — it is regenerated by Twin._
-_Append decisions to decisions.md. Edit tasks in tasks.yaml._
+_Append decisions to decisions.yaml. Edit tasks in tasks.yaml._
 ```
 
 ---
@@ -1071,7 +1074,7 @@ Rules:
 | `create_task` | Append entry to `tasks.yaml`, generate ULID |
 | `update_task_status` | Find entry by ID, update status |
 | `mark_blocked` / `mark_unblocked` | Update blocked_by and waiting_on by ID |
-| `append_decision` | Append formatted entry to `decisions.md`, generate ULID |
+| `append_decision` | Append entry to `decisions.yaml`, generate ULID |
 | `supersede_decision` | Set old decision to `superseded`, set `superseded_by` |
 | `create_delivery` | Append entry to `deliveries.yaml`, generate ULID |
 | `update_delivery_status` | Update status in `deliveries.yaml` by ID |
@@ -1422,7 +1425,7 @@ _Session: [session_id] · Scope: project — [project name]_
 
 ---
 _Full context available in this folder:_
-_tasks.yaml · deliveries.yaml · decisions.md · notes/_
+_tasks.yaml · deliveries.yaml · decisions.yaml · notes/_
 
 ## Session writeback instructions
 [writeback contract with ID mapping]
@@ -1430,17 +1433,9 @@ _tasks.yaml · deliveries.yaml · decisions.md · notes/_
 
 **Writeback:** Claude Code writes a manifest to `~/twin/sessions/[session_id]-manifest.yaml`. The Code brief also instructs:
 ```
-At the end of this session, append any decisions to decisions.md using this format:
-## [date] — [decision title]
-_id: [leave blank for Twin to fill]_
-_status: active_
-
-**Decision:** ...
-**Rationale:** ...
-**Unblocks:** [task ID if applicable]
-**Supersedes:** [decision ID if this replaces a previous decision]
-
-Then write your full session manifest to the path in the writeback instructions.
+At the end of this session, write your full session manifest to the path in the
+writeback instructions. Twin's Reconciler will extract decisions and apply them
+to decisions.yaml — you do not need to edit decisions.yaml directly.
 ```
 
 ---
@@ -1613,7 +1608,7 @@ OPEN QUESTIONS (1)
 ☑  Can cluster be dedicated during peak inference periods?
 ```
 
-**On confirm:** State Updater creates a `chat_learning` note, appends ticked decisions to `decisions.md`, appends ticked tasks to `tasks.yaml`.
+**On confirm:** State Updater creates a `chat_learning` note, appends ticked decisions to `decisions.yaml`, appends ticked tasks to `tasks.yaml`.
 
 ---
 
@@ -1676,7 +1671,7 @@ What did you discuss?
 
 What was agreed or decided?
 [ _____________________________________________ ]
-☑ Append agreed items to decisions.md
+☑ Append agreed items to decisions.yaml
 
 Open questions?
 [ _____________________________________________ ]
@@ -1698,10 +1693,10 @@ Full path — see section 10. Quick path: `Cmd+D` from any view.
 | Graph visualisation | `@antv/g6` v5 | WebGL rendering, combo nodes, minimap, fisheye, TypeScript-first |
 | Frontmatter parsing | `gray-matter` | Battle-tested YAML frontmatter |
 | YAML parsing | `yaml` (eemeli/yaml) | Round-trip with comment preservation |
-| Markdown rendering | `marked` | Lightweight |
+| Markdown rendering | `markdown-it` | CommonMark compliant, safe defaults, rich plugin ecosystem |
 | AI calls | `@anthropic-ai/sdk` | Official SDK, streaming, prompt caching |
 | IDs | `ulid` | Sortable by creation time |
-| Fuzzy matching | `fuse.js` | For Reconciler task-title fallback |
+| Fuzzy matching | `uFuzzy` | Short-phrase matching for Reconciler task-title fallback (4kb, transparent scoring) |
 | Clipboard monitoring | `tauri-plugin-clipboard` (CrossCopy) | Event-based clipboard change detection |
 | macOS permissions | `tauri-plugin-macos-permissions` | Check Accessibility permission status |
 | File watching | Tauri `fs` plugin (watch) | Detects agent writebacks |
@@ -1741,7 +1736,7 @@ export const fs = {
   readPeople(): Promise<PersonEntity[]>
   writePeople(people: PersonEntity[]): Promise<void>
 
-  // Decisions (append-only markdown with lifecycle)
+  // Decisions (YAML with lifecycle)
   readDecisions(projectSlug: string): Promise<DecisionEntity[]>
   readActiveDecisions(projectSlug: string): Promise<DecisionEntity[]>
   appendDecision(projectSlug: string, entry: DecisionEntity): Promise<void>
@@ -1937,7 +1932,7 @@ tasks.yaml:
 deliveries.yaml:
 [full content]
 
-decisions.md (active decisions only, last 10):
+decisions.yaml (active decisions only, last 10):
 [active entries only]
 
 Twin-synced notes (title + first 200 chars):
@@ -1957,9 +1952,9 @@ _Generated by Twin · [date]_
 
 End with:
 ---
-_Source files: context.md · tasks.yaml · deliveries.yaml · decisions.md · notes/_
+_Source files: context.md · tasks.yaml · deliveries.yaml · decisions.yaml · notes/_
 _Do not edit this file — it is regenerated by Twin._
-_Append decisions to decisions.md. Edit tasks in tasks.yaml._
+_Append decisions to decisions.yaml. Edit tasks in tasks.yaml._
 ```
 
 ---
@@ -2199,7 +2194,7 @@ Session-end prompt modal. Clipboard auto-detect (CrossCopy plugin). Quick summar
 
 `people.yaml` read/write. People picker. Conversation note UI with three text areas. Agreed → decisions checkbox with ULID generation.
 
-**Gate:** Record a conversation in under 2 minutes. Agreed items appear in `decisions.md` with IDs.
+**Gate:** Record a conversation in under 2 minutes. Agreed items appear in `decisions.yaml` with IDs.
 
 #### Step 13 — Note editor + chat assistant (~4h)
 
@@ -2211,7 +2206,7 @@ Full editor with frontmatter controls. Chat pane with Composer context pack. "Sa
 
 #### Step 14 — Decision lifecycle (~4h)
 
-`supersede_decision` delta operation. UI for marking decisions superseded. Supersession chains in decisions.md. Composer filters to active only.
+`supersede_decision` delta operation. UI for marking decisions superseded. Supersession chains in decisions.yaml. Composer filters to active only.
 
 **Gate:** Superseding a decision updates both entries atomically. Context packs exclude superseded decisions.
 
@@ -2269,7 +2264,7 @@ The prototype is complete when all of the following are true:
 8. After a Chat session, you write back via the session-end prompt in under 15 seconds.
 9. After a Code session, the Reconciler proposes correct deltas. Task references resolve by ID.
 10. After a Cowork session, Twin detects the output and offers to update the delivery status.
-11. You record a colleague conversation in under 2 minutes. Agreed items appear in `decisions.md` with stable IDs.
+11. You record a colleague conversation in under 2 minutes. Agreed items appear in `decisions.yaml` with stable IDs.
 12. The Prioritiser surfaces at least one accurate proactive proposal during the test week.
 13. A decision you supersede no longer appears in context packs.
 14. Archiving a project cleanly removes it from the graph, sidebar, and focus view.
