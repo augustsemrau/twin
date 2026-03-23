@@ -1,0 +1,48 @@
+# Tasks — municipality-platform
+# Updated: 2026-03-17
+
+tasks:
+  - id: 01JBQF3A1K
+    title: Finalise Q2 pitch structure
+    status: in_progress
+    priority: high
+    due: 2026-03-21
+    blocked_by: null
+    waiting_on: null
+    delivery: 01JBQF9M3P
+
+  - id: 01JBQF3B2M
+    title: Architecture diagram
+    status: blocked
+    priority: high
+    due: 2026-03-21
+    blocked_by: Infra cost estimate
+    waiting_on: Thomas
+    delivery: 01JBQF9M3P
+
+  - id: 01JBQF3C3N
+    title: TCO one-pager for Jakob
+    status: todo
+    priority: high
+    due: 2026-03-18
+    blocked_by: null
+    waiting_on: null
+    delivery: 01JBQF9N4Q
+
+  - id: 01JBQF3D4P
+    title: Stakeholder alignment doc
+    status: todo
+    priority: medium
+    due: 2026-03-25
+    blocked_by: null
+    waiting_on: null
+    delivery: null
+
+  - id: 01JBQF3E5Q
+    title: Set up Polars dev environment
+    status: todo
+    priority: low
+    due: null
+    blocked_by: null
+    waiting_on: null
+    delivery: null

@@ -1,0 +1,27 @@
+# Deliveries — municipality-platform
+# Updated: 2026-03-17
+
+deliveries:
+  - id: 01JBQF9M3P
+    title: Q2 pitch deck
+    slug: q2-pitch-deck
+    type: deck
+    status: in_progress
+    due: 2026-03-21
+    brief: Architecture proposal, 3 options, risk section
+
+  - id: 01JBQF9N4Q
+    title: TCO one-pager
+    slug: tco-one-pager
+    type: doc
+    status: draft
+    due: 2026-03-18
+    brief: Single-page TCO comparison for Jakob
+
+  - id: 01JBQF9P5R
+    title: Tech stack ADR
+    slug: tech-stack-adr
+    type: doc
+    status: draft
+    due: 2026-03-25
+    brief: Architecture decision record for Polars + DuckDB

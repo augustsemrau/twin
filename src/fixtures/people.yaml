@@ -1,0 +1,25 @@
+# People
+# Updated: 2026-03-17
+
+people:
+  - id: 01JBQFB1A1
+    name: Thomas
+    role: Infrastructure lead
+    projects:
+      - municipality-platform
+    notes: Client-side, key technical contact
+
+  - id: 01JBQFB2B2
+    name: Jakob
+    role: IT Director
+    projects:
+      - municipality-platform
+    notes: Client stakeholder, risk-averse, vendor lock-in concern
+
+  - id: 01JBQFB3C3
+    name: Rasmus
+    role: Consultant
+    projects:
+      - municipality-platform
+      - internal-tooling
+    notes: Trustworks colleague, reviews exec summaries

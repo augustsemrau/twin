@@ -1,0 +1,41 @@
+# Twin session writeback schema v1.0
+# Write your session manifest to ~/twin/sessions/[session_id]-manifest.yaml
+
+session_id: ULID
+summary: string
+target: chat | code | cowork
+
+decisions:
+  - title: string
+    decision: string
+    rationale: string
+    unblocks: ULID[]
+    supersedes: ULID
+
+tasks_created:
+  - title: string
+    priority: high | medium | low
+    due_date: YYYY-MM-DD
+    waiting_on: string
+
+tasks_updated:
+  - id: ULID
+    status: todo | in_progress | blocked | done
+    blocked_by: string
+    waiting_on: string
+
+artifacts:
+  - path: string
+    delivery_id: ULID
+    description: string
+
+open_questions:
+  - id: ULID
+    question: string
+
+blockers:
+  - title: string
+    blocked_by: string
+    waiting_on: string
+
+confidence: high | medium | low

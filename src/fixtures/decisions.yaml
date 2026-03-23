@@ -1,0 +1,36 @@
+# Decisions — municipality-platform
+# Updated: 2026-03-17
+
+decisions:
+  - id: 01JBQFA1K2
+    title: Data framework decision deferred
+    status: active
+    date: 2026-03-17
+    decided_by: August
+    unblocks:
+      - 01JBQF3B2M
+    decision: No final decision on Polars vs Spark yet.
+    rationale: >
+      Blocked on infra cost estimate from Thomas. Decide by Friday EOD.
+
+  - id: 01JBQFA2M3
+    title: On-premise inference confirmed
+    status: active
+    date: 2026-03-14
+    decided_by: August + client IT team
+    unblocks:
+      - 01JBQF3D4P
+    decision: All LLM inference will run on-prem on the client's H100 cluster.
+    rationale: >
+      Client data governance policy prohibits cloud inference.
+
+  - id: 01JBQFA0J1
+    title: Cloud inference considered
+    status: superseded
+    superseded_by: 01JBQFA2M3
+    date: 2026-03-10
+    decided_by: August
+    unblocks: []
+    decision: Evaluate both cloud and on-prem inference.
+    rationale: >
+      Initial assumption before client data governance constraints were known.
