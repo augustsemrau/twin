@@ -11,6 +11,9 @@ importers:
       '@antv/g6':
         specifier: ^5.0.51
         version: 5.0.51(workerize-loader@2.0.2(webpack@5.105.4))
+      '@leeoniya/ufuzzy':
+        specifier: ^1.0.19
+        version: 1.0.19
       '@tauri-apps/api':
         specifier: ^2
         version: 2.10.1
@@ -23,9 +26,6 @@ importers:
       '@tauri-apps/plugin-shell':
         specifier: ^2
         version: 2.3.5
-      fuse.js:
-        specifier: ^7.1.0
-        version: 7.1.0
       gray-matter:
         specifier: ^4.0.3
         version: 4.0.3
@@ -459,6 +459,9 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@leeoniya/ufuzzy@1.0.19':
+    resolution: {integrity: sha512-0pikDeYt0IHEUPza5RTCDXc/17S1pTrYnReEMp8Aa6k1ovzw5QdZLwicW8TjljwEZRb6oYag0xmALohrcq/yOQ==}
 
   '@naoak/workerize-transferable@0.1.0':
     resolution: {integrity: sha512-fDLfuP71IPNP5+zSfxFb52OHgtjZvauRJWbVnpzQ7G7BjcbLjTny0OW1d3ZO806XKpLWNKmeeW3MhE0sy8iwYQ==}
@@ -1339,10 +1342,6 @@ packages:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
-
-  fuse.js@7.1.0:
-    resolution: {integrity: sha512-trLf4SzuuUxfusZADLINj+dE8clK1frKdmqiJNb1Es75fmI5oY6X2mxLVUciLLjxqw/xr72Dhy+lER6dGd02FQ==}
-    engines: {node: '>=10'}
 
   gensync@1.0.0-beta.2:
     resolution: {integrity: sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==}
@@ -2377,6 +2376,8 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
+  '@leeoniya/ufuzzy@1.0.19': {}
+
   '@naoak/workerize-transferable@0.1.0(workerize-loader@2.0.2(webpack@5.105.4))':
     dependencies:
       workerize-loader: 2.0.2(webpack@5.105.4)
@@ -3170,8 +3171,6 @@ snapshots:
 
   fsevents@2.3.3:
     optional: true
-
-  fuse.js@7.1.0: {}
 
   gensync@1.0.0-beta.2: {}
 
