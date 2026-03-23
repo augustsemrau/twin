@@ -713,7 +713,7 @@ type DecisionEntity = {
   title: string
   decision: string
   rationale: string | null
-  unblocks: ULID | null
+  unblocks: ULID[]
   date: string
   decided_by: string
   project: string
