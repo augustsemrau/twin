@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useWorkGraph } from '@/hooks/useWorkGraph'
 import { Sidebar } from '@/components/Sidebar'
+import { GraphView } from '@/components/GraphView'
 import { seedTwinFolder } from '@/lib/seed'
 import type { ProjectEntity } from '@/types/entities'
 import './App.css'
@@ -44,12 +45,16 @@ function App() {
       />
       <main className="flex-1 p-6 bg-white overflow-auto">
         {activeView === 'graph' && graph && (
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Work Graph</h1>
-            <p className="mt-2 text-gray-500">
-              {graph.entities.length} entities, {graph.relationships.length} relationships
-            </p>
-            {/* GraphView component will go here in Task 10 */}
+          <div className="h-full flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-2xl font-bold text-gray-900">Work Graph</h1>
+              <p className="text-sm text-gray-500">
+                {graph.entities.length} entities, {graph.relationships.length} relationships
+              </p>
+            </div>
+            <div className="flex-1 min-h-0">
+              <GraphView graph={graph} />
+            </div>
           </div>
         )}
         {activeView === 'focus' && (
