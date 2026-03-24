@@ -13,6 +13,7 @@ import type { WorkGraphEntity } from '@/types/entities'
 import { runPlanner } from '@/lib/planner'
 import { buildContextPack, saveContextPack, getProjectEntities } from '@/lib/composer'
 import { writeProjectCLAUDE } from '@/lib/fs'
+import { globalClaudePath } from '@/lib/paths'
 import { SourceChecklist } from './SourceChecklist'
 import { BriefPreview } from './BriefPreview'
 import { StatusBadge } from './StatusBadge'
@@ -142,12 +143,20 @@ export function DispatchView({ graph, projectSlug, onDispatch }: DispatchViewPro
         .filter((e) => 'id' in e && selectedSources.has((e as { id: string }).id))
         .map((e) => e.ref)
 
+      let globalContext = ''
+      try {
+        const { readTextFile } = await import('@tauri-apps/plugin-fs')
+        globalContext = await readTextFile(await globalClaudePath())
+      } catch {
+        // CLAUDE.md may not exist yet — proceed with empty context
+      }
+
       const pack = buildContextPack({
         target: selectedTarget,
         objective,
         selectedSources: sources,
         graph,
-        globalContext: '',
+        globalContext,
         projectSlug: projectSlug ?? '',
       })
 

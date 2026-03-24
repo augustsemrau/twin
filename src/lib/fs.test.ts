@@ -121,6 +121,13 @@ describe('parseInboxContent', () => {
   })
 })
 
+describe('fs edge cases', () => {
+  it('parseNotes returns empty array when given no files', () => {
+    const notes = parseNotes([], 'test-project')
+    expect(notes).toEqual([])
+  })
+})
+
 describe('fs serialization', () => {
   it('round-trips tasks through parse -> serialize -> parse', () => {
     const original = parseTasks(fixture('tasks.yaml'), 'test-project')

@@ -109,6 +109,50 @@ describe('validator', () => {
     expect(result.warnings.length).toBeGreaterThan(0)
   })
 
+  // --- Batch-aware validation ---
+  it('accepts supersede_decision when new_id is in same batch append_decision', () => {
+    const deltas: DeltaOperation[] = [
+      {
+        op: 'append_decision',
+        payload: {
+          id: '01NEWDEC',
+          title: 'New decision',
+          decision: 'We decided X',
+          rationale: 'Because Y',
+          date: '2026-03-20',
+          decided_by: 'August',
+          unblocks: [],
+          status: 'active',
+          superseded_by: null,
+          project: 'municipality-platform',
+        },
+      } as unknown as DeltaOperation,
+      {
+        op: 'supersede_decision',
+        old_id: '01JBQFA1K2', // active decision in fixture
+        new_id: '01NEWDEC',   // created in the same batch
+        project: 'municipality-platform',
+      },
+    ]
+    const result = validateDeltas(deltas, graph)
+    expect(result.valid).toBe(true)
+    expect(result.errors).toHaveLength(0)
+  })
+
+  it('rejects supersede_decision when new_id is not in graph or batch', () => {
+    const deltas: DeltaOperation[] = [
+      {
+        op: 'supersede_decision',
+        old_id: '01JBQFA1K2',
+        new_id: 'TOTALLY_MISSING',
+        project: 'municipality-platform',
+      },
+    ]
+    const result = validateDeltas(deltas, graph)
+    expect(result.valid).toBe(false)
+    expect(result.errors[0].reason).toContain('not found')
+  })
+
   // --- Multiple deltas ---
   it('validates multiple deltas and reports all errors', () => {
     const deltas: DeltaOperation[] = [

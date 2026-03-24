@@ -226,9 +226,18 @@ export async function readPeople(): Promise<PersonEntity[]> {
 }
 
 export async function readNotes(projectSlug: string): Promise<NoteEntity[]> {
-  const { readTextFile, readDir } = await tauriFs()
+  const { readTextFile, readDir, exists } = await tauriFs()
   const paths = await tauriPaths()
   const notesDir = await paths.projectNotesPath(projectSlug)
+
+  // Return empty array if notes/ directory doesn't exist
+  try {
+    const dirExists = await exists(notesDir)
+    if (!dirExists) return []
+  } catch {
+    return []
+  }
+
   const entries = await readDir(notesDir)
   const files: Array<{ filename: string; content: string }> = []
   for (const entry of entries) {

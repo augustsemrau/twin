@@ -14,6 +14,7 @@ import type { WorkGraph } from '@/types/graph'
 import type { ResolverOutput } from '@/types/agents'
 import { writeInbox } from '@/lib/fs'
 import { runResolver } from '@/lib/resolver'
+import matter from 'gray-matter'
 
 // ---------------------------------------------------------------------------
 // Pure helpers
@@ -68,23 +69,26 @@ function serializeResolverOutput(output: ResolverOutput): string {
   return JSON.stringify(output)
 }
 
+async function readInboxFile(filename: string): Promise<string> {
+  const { readTextFile } = await import('@tauri-apps/plugin-fs')
+  const { inboxPath } = await import('@/lib/paths')
+  const { join } = await import('@tauri-apps/api/path')
+  const dir = await inboxPath()
+  const path = await join(dir, filename)
+  return readTextFile(path)
+}
+
 async function updateInboxFrontmatter(
   filename: string,
-  originalContent: string,
   update: Record<string, string>,
 ): Promise<void> {
-  // Simple frontmatter update — replace the closing --- and inject new keys
-  const closingIdx = originalContent.indexOf('\n---\n', 4)
-  if (closingIdx === -1) return
+  // Re-read the file from disk to avoid stale content issues
+  const currentContent = await readInboxFile(filename)
+  const { data, content: body } = matter(currentContent)
 
-  const existingFrontmatter = originalContent.slice(0, closingIdx)
-  const body = originalContent.slice(closingIdx + 5) // skip '\n---\n'
-
-  const extraLines = Object.entries(update)
-    .map(([k, v]) => `${k}: ${v}`)
-    .join('\n')
-
-  const newContent = `${existingFrontmatter}\n${extraLines}\n---\n\n${body.trimStart()}`
+  // Merge update keys into existing frontmatter
+  const merged = { ...data, ...update }
+  const newContent = matter.stringify(body, merged)
   await writeInbox(filename, newContent)
 }
 
@@ -104,7 +108,7 @@ export async function captureToInbox(
   runResolver(text, graph, activeProject)
     .then(async (output) => {
       try {
-        await updateInboxFrontmatter(filename, content, {
+        await updateInboxFrontmatter(filename, {
           resolver_output: JSON.stringify(serializeResolverOutput(output)),
         })
       } catch (err) {
@@ -115,7 +119,7 @@ export async function captureToInbox(
       console.warn('[capture] Resolver failed:', err)
       try {
         const message = err instanceof Error ? err.message : String(err)
-        await updateInboxFrontmatter(filename, content, {
+        await updateInboxFrontmatter(filename, {
           resolver_error: JSON.stringify(message),
         })
       } catch (writeErr) {

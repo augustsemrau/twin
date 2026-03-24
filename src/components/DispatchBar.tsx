@@ -12,6 +12,7 @@ import type { DispatchTarget } from '@/types/common'
 import type { TaskEntity, DeliveryEntity } from '@/types/entities'
 import { runPlanner } from '@/lib/planner'
 import { buildContextPack, saveContextPack } from '@/lib/composer'
+import { globalClaudePath } from '@/lib/paths'
 
 interface DispatchBarProps {
   graph: WorkGraph
@@ -148,12 +149,20 @@ export function DispatchBar({ graph, projectSlug, onDispatch, onClose }: Dispatc
         }
       }
 
+      let globalContext = ''
+      try {
+        const { readTextFile } = await import('@tauri-apps/plugin-fs')
+        globalContext = await readTextFile(await globalClaudePath())
+      } catch {
+        // CLAUDE.md may not exist yet — proceed with empty context
+      }
+
       const pack = buildContextPack({
         target,
         objective,
         selectedSources: sources,
         graph,
-        globalContext: '',
+        globalContext,
         projectSlug: projectSlug ?? '',
       })
 

@@ -43,6 +43,7 @@ function validateOp(
   graph: WorkGraph,
   errors: ValidationError[],
   warnings: ValidationWarning[],
+  allDeltas: DeltaOperation[] = [],
 ): void {
   const err = (reason: string) => errors.push({ op, reason })
   const warn = (reason: string) => warnings.push({ op, reason })
@@ -138,7 +139,12 @@ function validateOp(
       if (oldDecision.status !== 'active') {
         err(`decision '${old_id}' is not active (current status: '${oldDecision.status}')`)
       }
-      if (!findEntityById(graph, 'decision', new_id)) {
+      // Check graph first, then look for new_id in same batch's append_decision payloads
+      const inGraph = findEntityById(graph, 'decision', new_id)
+      const inBatch = allDeltas.some(
+        d => d.op === 'append_decision' && d.payload.id === new_id,
+      )
+      if (!inGraph && !inBatch) {
         err(`decision '${new_id}' not found in graph`)
       }
       break
@@ -240,7 +246,7 @@ export function validateDeltas(deltas: DeltaOperation[], graph: WorkGraph): Vali
   const warnings: ValidationWarning[] = []
 
   for (const op of deltas) {
-    validateOp(op, graph, errors, warnings)
+    validateOp(op, graph, errors, warnings, deltas)
   }
 
   return {
