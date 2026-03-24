@@ -14,7 +14,9 @@ import { FocusView } from '@/components/FocusView'
 import { DispatchBar } from '@/components/DispatchBar'
 import { DispatchView } from '@/components/DispatchView'
 import { BriefPreview } from '@/components/BriefPreview'
+import { SessionBanner } from '@/components/SessionBanner'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { useSessionTracker } from '@/hooks/useSessionTracker'
 import { seedTwinFolder } from '@/lib/seed'
 import { captureToInbox } from '@/lib/capture'
 import type { ProjectEntity } from '@/types/entities'
@@ -28,6 +30,13 @@ function App() {
   const [showDispatchBar, setShowDispatchBar] = useState(false)
   const [lastDispatchedPack, setLastDispatchedPack] = useState<ContextPack | null>(null)
   const { graph, loading, error, rebuild } = useWorkGraph()
+  const {
+    activeSessions,
+    reconcilerResult,
+    startSession,
+    markSessionDone,
+    clearReconcilerResult,
+  } = useSessionTracker()
 
   useEffect(() => {
     seedTwinFolder().then(() => setInitialized(true))
@@ -90,8 +99,8 @@ function App() {
   const handleDispatch = useCallback((pack: ContextPack) => {
     setLastDispatchedPack(pack)
     setShowDispatchBar(false)
-    // Session tracking will be wired in Task 6
-  }, [])
+    startSession(pack)
+  }, [startSession])
 
   const handleDismissBriefPreview = useCallback(() => {
     setLastDispatchedPack(null)
@@ -137,6 +146,34 @@ function App() {
           graph={graph}
         />
         <main className="flex-1 flex flex-col bg-white">
+          {/* Active session banners */}
+          {activeSessions.filter(s => !s.writeback_received || reconcilerResult).length > 0 && (
+            <div className="border-b border-gray-200 px-6 py-3 space-y-2">
+              {activeSessions
+                .filter(s => !s.writeback_received || reconcilerResult)
+                .map(session => (
+                  <SessionBanner
+                    key={session.session_id}
+                    session={session}
+                    reconcilerResult={
+                      reconcilerResult?.session_id === session.session_id
+                        ? reconcilerResult
+                        : null
+                    }
+                    onMarkDone={() => markSessionDone(session.session_id, null)}
+                    onImportConversation={() => {
+                      // TODO: Wire to conversation import flow
+                      console.log('Import conversation for session', session.session_id)
+                    }}
+                    onReviewDeltas={() => {
+                      // TODO: Wire to DeltaReview overlay
+                      console.log('Review deltas for session', session.session_id)
+                      clearReconcilerResult()
+                    }}
+                  />
+                ))}
+            </div>
+          )}
           <div className="flex-1 overflow-auto p-6">
             <ErrorBoundary>
               {activeView === 'graph' && graph && (

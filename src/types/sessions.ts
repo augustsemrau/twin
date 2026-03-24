@@ -23,12 +23,41 @@ export type SessionManifest = {
   session_id: ULID
   summary: string
   target: DispatchTarget
-  decisions: string[]
-  tasks_created: Array<{ id?: ULID; title: string }>
-  tasks_updated: Array<{ id?: ULID; title: string }>
-  artifacts: string[]
-  open_questions: string[]
-  blockers: string[]
+  decisions: Array<{
+    title: string
+    decision: string
+    rationale?: string
+    unblocks?: ULID
+    supersedes?: ULID
+  }>
+  tasks_created: Array<{
+    id?: ULID
+    title: string
+    priority?: 'high' | 'medium' | 'low'
+    due_date?: string
+    waiting_on?: string
+  }>
+  tasks_updated: Array<{
+    id?: ULID
+    title?: string
+    status?: 'todo' | 'in_progress' | 'blocked' | 'done'
+    blocked_by?: string
+    waiting_on?: string
+  }>
+  artifacts: Array<{
+    path: string
+    delivery_id?: ULID
+    description: string
+  }>
+  open_questions: Array<{
+    id?: ULID
+    question: string
+  }>
+  blockers: Array<{
+    title: string
+    blocked_by: string
+    waiting_on?: string
+  }>
   confidence: Confidence
 }
 
@@ -38,5 +67,5 @@ export type ActiveSession = {
   objective: string
   dispatched_at: ISOTimestamp
   writeback_received: boolean
-  writeback_path?: string
+  writeback_path: string | null
 }
