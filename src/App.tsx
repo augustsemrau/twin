@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { register, unregister } from '@tauri-apps/plugin-global-shortcut'
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { listen } from '@tauri-apps/api/event'
@@ -11,16 +11,22 @@ import { ProjectTaskList } from '@/components/ProjectTaskList'
 import { ProjectDeliveryList } from '@/components/ProjectDeliveryList'
 import { ProjectNoteList } from '@/components/ProjectNoteList'
 import { FocusView } from '@/components/FocusView'
+import { DispatchBar } from '@/components/DispatchBar'
+import { DispatchView } from '@/components/DispatchView'
+import { BriefPreview } from '@/components/BriefPreview'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { seedTwinFolder } from '@/lib/seed'
 import { captureToInbox } from '@/lib/capture'
 import type { ProjectEntity } from '@/types/entities'
+import type { ContextPack } from '@/types/sessions'
 import './App.css'
 
 function App() {
   const [initialized, setInitialized] = useState(false)
   const [activeView, setActiveView] = useState('focus')
   const [inboxCount, setInboxCount] = useState(0)
+  const [showDispatchBar, setShowDispatchBar] = useState(false)
+  const [lastDispatchedPack, setLastDispatchedPack] = useState<ContextPack | null>(null)
   const { graph, loading, error, rebuild } = useWorkGraph()
 
   useEffect(() => {
@@ -68,6 +74,28 @@ function App() {
       unregister('CommandOrControl+Shift+Space').catch(() => {})
     }
   }, [rebuild])
+
+  // Cmd+D shortcut to toggle DispatchBar (in-app, not global)
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.metaKey && e.key === 'd') {
+        e.preventDefault()
+        setShowDispatchBar((prev) => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  const handleDispatch = useCallback((pack: ContextPack) => {
+    setLastDispatchedPack(pack)
+    setShowDispatchBar(false)
+    // Session tracking will be wired in Task 6
+  }, [])
+
+  const handleDismissBriefPreview = useCallback(() => {
+    setLastDispatchedPack(null)
+  }, [])
 
   if (!initialized || loading) {
     return (
@@ -198,7 +226,16 @@ function App() {
                   <p className="mt-2 text-gray-500">Select a view from the sidebar.</p>
                 </div>
               )}
-              {!activeProjectSlug && activeView !== 'graph' && activeView !== 'focus' && activeView !== 'inbox' && (
+              {activeView === 'dispatch' && graph && (
+                <ErrorBoundary>
+                  <DispatchView
+                    graph={graph}
+                    projectSlug={activeProjectSlug}
+                    onDispatch={handleDispatch}
+                  />
+                </ErrorBoundary>
+              )}
+              {!activeProjectSlug && activeView !== 'graph' && activeView !== 'focus' && activeView !== 'inbox' && activeView !== 'dispatch' && (
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">{activeView}</h1>
                   <p className="mt-2 text-gray-500">Coming soon...</p>
@@ -211,6 +248,61 @@ function App() {
           </div>
         </main>
       </div>
+
+      {/* Quick Dispatch overlay (Cmd+D) */}
+      {showDispatchBar && graph && (
+        <DispatchBar
+          graph={graph}
+          projectSlug={activeProjectSlug}
+          onDispatch={handleDispatch}
+          onClose={() => setShowDispatchBar(false)}
+        />
+      )}
+
+      {/* Brief preview overlay after dispatch */}
+      {lastDispatchedPack && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center" onClick={handleDismissBriefPreview}>
+          <div className="absolute inset-0 bg-black/30" />
+          <div
+            className="relative w-full max-w-2xl max-h-[80vh] bg-white rounded-xl shadow-2xl p-6 overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm text-gray-500">
+                Dispatched to <span className="font-medium text-gray-700">{lastDispatchedPack.target}</span>
+                {' '}— brief copied to clipboard
+              </p>
+              <button
+                type="button"
+                onClick={handleDismissBriefPreview}
+                className="text-gray-400 hover:text-gray-600 text-sm"
+              >
+                Dismiss
+              </button>
+            </div>
+            <BriefPreview
+              markdown={lastDispatchedPack.brief_markdown}
+              onCopy={async () => {
+                try {
+                  await navigator.clipboard.writeText(lastDispatchedPack.brief_markdown)
+                } catch { /* clipboard unavailable */ }
+              }}
+              onWriteToProject={
+                (lastDispatchedPack.target === 'code' || lastDispatchedPack.target === 'cowork') && activeProjectSlug
+                  ? async () => {
+                      try {
+                        const { writeProjectCLAUDE } = await import('@/lib/fs')
+                        await writeProjectCLAUDE(activeProjectSlug!, lastDispatchedPack.brief_markdown)
+                      } catch (err) {
+                        console.error('Failed to write CLAUDE.md:', err)
+                      }
+                    }
+                  : undefined
+              }
+            />
+          </div>
+        </div>
+      )}
     </ErrorBoundary>
   )
 }
