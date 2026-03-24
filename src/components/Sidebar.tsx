@@ -6,6 +6,7 @@
 
 import type { ProjectEntity, TaskEntity, DeliveryEntity, NoteEntity } from '@/types/entities'
 import type { WorkGraph } from '@/types/graph'
+import { ApiStatus } from './ApiStatus'
 
 type SidebarProps = {
   projects: ProjectEntity[]
@@ -143,10 +144,7 @@ export function Sidebar({ projects, activeView, onNavigate, inboxCount, graph }:
 
       {/* Footer */}
       <div className="mx-4 border-t border-slate-700" />
-      <div className="px-4 py-3 flex items-center">
-        <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-2" />
-        <span className="text-xs text-slate-400">Twin active</span>
-      </div>
+      <ApiStatus />
     </aside>
   )
 }
