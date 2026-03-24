@@ -3,7 +3,7 @@ import { register, unregister } from '@tauri-apps/plugin-global-shortcut'
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { listen } from '@tauri-apps/api/event'
 import { useWorkGraph } from '@/hooks/useWorkGraph'
-import { Sidebar } from '@/components/Sidebar'
+import { Sidebar, ArchiveView } from '@/components/Sidebar'
 import { GraphView } from '@/components/GraphView'
 import { CaptureStrip } from '@/components/CaptureStrip'
 import { InboxTriage } from '@/components/InboxTriage'
@@ -34,6 +34,7 @@ function App() {
   const [inboxCount, setInboxCount] = useState(0)
   const [showDispatchBar, setShowDispatchBar] = useState(false)
   const [lastDispatchedPack, setLastDispatchedPack] = useState<ContextPack | null>(null)
+  const [archivedProjects, setArchivedProjects] = useState<string[]>([])
   const { graph, loading, error, rebuild } = useWorkGraph()
   const {
     activeSessions,
@@ -52,6 +53,31 @@ function App() {
   useEffect(() => {
     seedTwinFolder().then(() => setInitialized(true))
   }, [])
+
+  // Load archived projects list
+  const loadArchivedProjects = useCallback(async () => {
+    try {
+      const { listArchivedProjects } = await import('@/lib/fs')
+      const archived = await listArchivedProjects()
+      setArchivedProjects(archived)
+    } catch {
+      // Archive dir may not exist yet
+    }
+  }, [])
+
+  useEffect(() => {
+    if (initialized) {
+      loadArchivedProjects()
+    }
+  }, [initialized, loadArchivedProjects])
+
+  // Auto-archive old sessions on graph build (non-blocking, silent)
+  useEffect(() => {
+    if (!graph) return
+    import('@/lib/fs').then(({ archiveOldSessions }) => {
+      archiveOldSessions(30).catch(() => {})
+    })
+  }, [graph])
 
   // Keep refs to avoid re-registering the shortcut on every graph/view change
   const graphRef = useRef(graph)
@@ -116,6 +142,82 @@ function App() {
   const handleDismissBriefPreview = useCallback(() => {
     setLastDispatchedPack(null)
   }, [])
+
+  // Archive/restore handlers
+  const handleArchiveProject = useCallback(async (slug: string) => {
+    try {
+      const { archiveProject } = await import('@/lib/fs')
+      await archiveProject(slug)
+      await rebuild()
+      await loadArchivedProjects()
+    } catch (err) {
+      console.error('Failed to archive project:', err)
+    }
+  }, [rebuild, loadArchivedProjects])
+
+  const handleRestoreProject = useCallback(async (slug: string) => {
+    try {
+      const { restoreProject } = await import('@/lib/fs')
+      await restoreProject(slug)
+      await rebuild()
+      await loadArchivedProjects()
+    } catch (err) {
+      console.error('Failed to restore project:', err)
+    }
+  }, [rebuild, loadArchivedProjects])
+
+  // GraphView dispatch/open handlers
+  const handleDispatchFromEntity = useCallback((objective: string) => {
+    setActiveView('dispatch')
+    // The dispatch view will pick up the objective
+    // For now, open dispatch bar with pre-filled text
+    setShowDispatchBar(true)
+    // Store the objective so DispatchBar can use it
+    // We'll use a simple approach: navigate to dispatch view
+    setTimeout(() => {
+      setShowDispatchBar(false)
+      setActiveView('dispatch')
+    }, 0)
+    console.log('[GraphView] Dispatch from entity:', objective)
+  }, [])
+
+  const handleOpenEntity = useCallback((entityKind: string, entityId: string) => {
+    if (!graph) return
+    // Find the entity to determine its project
+    const entity = graph.entities.find((e) => {
+      if (e.kind === 'project') return e.slug === entityId
+      return 'id' in e && (e as { id: string }).id === entityId
+    })
+    if (!entity) return
+
+    const project = 'project' in entity ? (entity as { project: string }).project : undefined
+
+    if (!project) return
+
+    switch (entityKind) {
+      case 'task':
+        setActiveView(`project:${project}:tasks`)
+        break
+      case 'delivery':
+        setActiveView(`project:${project}:deliveries`)
+        break
+      case 'decision':
+        setActiveView(`project:${project}:decisions`)
+        break
+      case 'note': {
+        const noteEntity = entity as { filename?: string }
+        if (noteEntity.filename) {
+          setActiveView(`note:${project}:${noteEntity.filename}`)
+        } else {
+          setActiveView(`project:${project}:notes`)
+        }
+        break
+      }
+      default:
+        if (project) setActiveView(`project:${project}`)
+        break
+    }
+  }, [graph])
 
   // Session end modal handlers
   const handleSessionEndSave = useCallback((sessionId: string) => {
@@ -201,6 +303,9 @@ function App() {
           onNavigate={setActiveView}
           inboxCount={inboxCount}
           graph={graph}
+          onArchiveProject={handleArchiveProject}
+          onRestoreProject={handleRestoreProject}
+          archivedProjects={archivedProjects}
         />
         <main className="flex-1 flex flex-col bg-white">
           {/* Active session banners */}
@@ -246,7 +351,11 @@ function App() {
                         </div>
                       }
                     >
-                      <GraphView graph={graph} />
+                      <GraphView
+                        graph={graph}
+                        onDispatchFromEntity={handleDispatchFromEntity}
+                        onOpenEntity={handleOpenEntity}
+                      />
                     </ErrorBoundary>
                   </div>
                 </div>
@@ -266,6 +375,12 @@ function App() {
                     onCountChanged={setInboxCount}
                   />
                 </ErrorBoundary>
+              )}
+              {activeView === 'archive' && (
+                <ArchiveView
+                  archivedProjects={archivedProjects}
+                  onRestore={handleRestoreProject}
+                />
               )}
               {activeProjectSlug && activeSubView === 'tasks' && graph && (
                 <ErrorBoundary>
@@ -347,7 +462,11 @@ function App() {
                         </div>
                       }
                     >
-                      <GraphView graph={graph} />
+                      <GraphView
+                        graph={graph}
+                        onDispatchFromEntity={handleDispatchFromEntity}
+                        onOpenEntity={handleOpenEntity}
+                      />
                     </ErrorBoundary>
                   </div>
                 </div>
@@ -369,7 +488,7 @@ function App() {
                   />
                 </ErrorBoundary>
               )}
-              {!activeProjectSlug && activeView !== 'graph' && activeView !== 'focus' && activeView !== 'inbox' && activeView !== 'dispatch' && (
+              {!activeProjectSlug && activeView !== 'graph' && activeView !== 'focus' && activeView !== 'inbox' && activeView !== 'dispatch' && activeView !== 'archive' && (
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">{activeView}</h1>
                   <p className="mt-2 text-gray-500">Coming soon...</p>

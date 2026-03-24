@@ -1,15 +1,102 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { Graph } from '@antv/g6'
 import type { WorkGraph } from '@/types/graph'
 import { workGraphToG6 } from '@/lib/graph-to-g6'
+import { GraphControls, type EntityKind } from './GraphControls'
+import type { G6GraphData } from '@/lib/graph-to-g6'
 
 interface GraphViewProps {
   graph: WorkGraph
+  onDispatchFromEntity?: (objective: string) => void
+  onOpenEntity?: (entityKind: string, entityId: string) => void
 }
 
-export function GraphView({ graph }: GraphViewProps) {
+const ALL_KINDS: Set<EntityKind> = new Set([
+  'task', 'delivery', 'decision', 'note', 'person', 'open_question', 'session',
+])
+
+type ContextMenuState = {
+  x: number
+  y: number
+  nodeId: string
+  label: string
+  entityKind: string
+} | null
+
+export function GraphView({ graph, onDispatchFromEntity, onOpenEntity }: GraphViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const graphInstanceRef = useRef<Graph | null>(null)
+
+  // Filter state
+  const [activeKinds, setActiveKinds] = useState<Set<EntityKind>>(new Set(ALL_KINDS))
+  const [activeStatus, setActiveStatus] = useState<string | null>(null)
+  const [activeRelType, setActiveRelType] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>(null)
+
+  // Close context menu on click anywhere
+  useEffect(() => {
+    function handleClick() {
+      setContextMenu(null)
+    }
+    window.addEventListener('click', handleClick)
+    return () => window.removeEventListener('click', handleClick)
+  }, [])
+
+  // Derive filtered G6 data
+  const filteredData = useMemo((): G6GraphData => {
+    const raw = workGraphToG6(graph)
+
+    // Filter nodes by entity kind
+    let nodes = raw.nodes.filter((n) => {
+      const kind = n.data.entityKind as EntityKind
+      return activeKinds.has(kind)
+    })
+
+    // Filter nodes by status
+    if (activeStatus) {
+      nodes = nodes.filter((n) => n.data.status === activeStatus)
+    }
+
+    // Collect visible node IDs
+    const visibleIds = new Set(nodes.map((n) => n.id))
+
+    // Filter edges — both endpoints must be visible
+    let edges = raw.edges.filter(
+      (e) => visibleIds.has(e.source) && visibleIds.has(e.target),
+    )
+
+    // Filter edges by relationship type
+    if (activeRelType) {
+      edges = edges.filter((e) => e.data.relType === activeRelType)
+    }
+
+    // Search highlighting — modify node styles
+    const query = searchQuery.trim().toLowerCase()
+    if (query) {
+      nodes = nodes.map((n) => {
+        const label = (n.data.label ?? '').toLowerCase()
+        const isMatch = label.includes(query)
+        return {
+          ...n,
+          style: {
+            ...n.style,
+            opacity: isMatch ? 1 : 0.25,
+            stroke: isMatch ? '#2563eb' : '#fff',
+            lineWidth: isMatch ? 3 : 1.5,
+          },
+        }
+      })
+    }
+
+    // Only include combos that have at least one visible child node
+    const usedCombos = new Set(nodes.map((n) => n.combo).filter(Boolean))
+    const combos = raw.combos.filter((c) => usedCombos.has(c.id))
+
+    return { nodes, edges, combos }
+  }, [graph, activeKinds, activeStatus, activeRelType, searchQuery])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -20,12 +107,10 @@ export function GraphView({ graph }: GraphViewProps) {
       graphInstanceRef.current = null
     }
 
-    const g6Data = workGraphToG6(graph)
-
     const g = new Graph({
       container: containerRef.current,
       autoFit: 'view',
-      data: g6Data,
+      data: filteredData,
 
       // Node styles — dynamic based on per-node data
       node: {
@@ -39,6 +124,10 @@ export function GraphView({ graph }: GraphViewProps) {
             const s = datum.style as Record<string, unknown> | undefined
             return (s?.fill as string) ?? '#9ca3af'
           },
+          opacity: (datum: Record<string, unknown>) => {
+            const s = datum.style as Record<string, unknown> | undefined
+            return (s?.opacity as number) ?? 1
+          },
           labelText: (datum: Record<string, unknown>) => {
             const d = datum.data as Record<string, unknown> | undefined
             return (d?.label as string) ?? ''
@@ -46,8 +135,14 @@ export function GraphView({ graph }: GraphViewProps) {
           labelFontSize: 10,
           labelPlacement: 'bottom',
           labelFill: '#374151',
-          stroke: '#fff',
-          lineWidth: 1.5,
+          stroke: (datum: Record<string, unknown>) => {
+            const s = datum.style as Record<string, unknown> | undefined
+            return (s?.stroke as string) ?? '#fff'
+          },
+          lineWidth: (datum: Record<string, unknown>) => {
+            const s = datum.style as Record<string, unknown> | undefined
+            return (s?.lineWidth as number) ?? 1.5
+          },
         },
       },
 
@@ -150,6 +245,35 @@ export function GraphView({ graph }: GraphViewProps) {
       ],
     })
 
+    // Right-click context menu handler
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    g.on('node:contextmenu', (evt: any) => {
+      const e = evt.event as MouseEvent | undefined
+      if (e) {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+
+      const target = evt.target as Record<string, unknown> | undefined
+      const targetId = (target?.id ?? evt.targetId ?? evt.itemId) as string | undefined
+      if (!targetId) return
+
+      // Find node data
+      const nodeData = filteredData.nodes.find((n) => n.id === targetId)
+      if (!nodeData) return
+
+      const clientX = e?.clientX ?? (evt.client as { x: number })?.x ?? 0
+      const clientY = e?.clientY ?? (evt.client as { y: number })?.y ?? 0
+
+      setContextMenu({
+        x: clientX as number,
+        y: clientY as number,
+        nodeId: targetId,
+        label: nodeData.data.label,
+        entityKind: nodeData.data.entityKind,
+      })
+    })
+
     g.render()
     graphInstanceRef.current = g
 
@@ -159,12 +283,72 @@ export function GraphView({ graph }: GraphViewProps) {
         graphInstanceRef.current = null
       }
     }
-  }, [graph])
+  }, [filteredData])
+
+  const handleDispatchFromHere = useCallback(() => {
+    if (contextMenu && onDispatchFromEntity) {
+      onDispatchFromEntity(contextMenu.label)
+    }
+    setContextMenu(null)
+  }, [contextMenu, onDispatchFromEntity])
+
+  const handleOpenEntity = useCallback(() => {
+    if (contextMenu && onOpenEntity) {
+      onOpenEntity(contextMenu.entityKind, contextMenu.nodeId)
+    }
+    setContextMenu(null)
+  }, [contextMenu, onOpenEntity])
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full min-h-[600px] bg-gray-50 rounded-lg border"
-    />
+    <div className="flex flex-col h-full gap-2">
+      <GraphControls
+        onFilterKinds={setActiveKinds}
+        onFilterStatus={setActiveStatus}
+        onFilterRelationship={setActiveRelType}
+        onSearch={setSearchQuery}
+        activeKinds={activeKinds}
+        activeStatus={activeStatus}
+        activeRelType={activeRelType}
+        searchQuery={searchQuery}
+      />
+      <div className="relative flex-1 min-h-0">
+        <div
+          ref={containerRef}
+          className="w-full h-full min-h-[600px] bg-gray-50 rounded-lg border"
+          onContextMenu={(e) => e.preventDefault()}
+        />
+
+        {/* Right-click context menu */}
+        {contextMenu && (
+          <div
+            className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[180px]"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-3 py-1.5 text-xs text-gray-500 border-b border-gray-100 truncate max-w-[220px]">
+              {contextMenu.label}
+            </div>
+            {onDispatchFromEntity && (
+              <button
+                type="button"
+                className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                onClick={handleDispatchFromHere}
+              >
+                Dispatch from here
+              </button>
+            )}
+            {onOpenEntity && (
+              <button
+                type="button"
+                className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                onClick={handleOpenEntity}
+              >
+                Open in editor
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }

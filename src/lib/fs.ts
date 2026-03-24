@@ -475,21 +475,86 @@ export async function listSessions(): Promise<string[]> {
 // --- Archive ---
 
 export async function archiveProject(projectSlug: string): Promise<void> {
-  const { rename } = await tauriFs()
+  const { rename, mkdir } = await tauriFs()
   const paths = await tauriPaths()
   const src = await paths.projectPath(projectSlug)
-  const dest = await tauriJoin(await paths.archivePath(), 'projects', projectSlug)
+  const archiveProjectsDir = await tauriJoin(await paths.archivePath(), 'projects')
+  await mkdir(archiveProjectsDir, { recursive: true })
+  const dest = await tauriJoin(archiveProjectsDir, projectSlug)
   await rename(src, dest)
 }
 
-export async function archiveSessions(sessionIds: string[]): Promise<void> {
+export async function restoreProject(projectSlug: string): Promise<void> {
   const { rename } = await tauriFs()
+  const paths = await tauriPaths()
+  const src = await tauriJoin(await paths.archivePath(), 'projects', projectSlug)
+  const dest = await paths.projectPath(projectSlug)
+  await rename(src, dest)
+}
+
+export async function listArchivedProjects(): Promise<string[]> {
+  const { readDir, exists } = await tauriFs()
+  const paths = await tauriPaths()
+  const archiveProjectsDir = await tauriJoin(await paths.archivePath(), 'projects')
+  try {
+    const dirExists = await exists(archiveProjectsDir)
+    if (!dirExists) return []
+  } catch {
+    return []
+  }
+  const entries = await readDir(archiveProjectsDir)
+  return entries
+    .filter((e) => e.isDirectory)
+    .map((e) => e.name)
+    .filter((name): name is string => name != null)
+}
+
+export async function archiveSessions(sessionIds: string[]): Promise<void> {
+  const { rename, mkdir } = await tauriFs()
   const paths = await tauriPaths()
   const sessionsDir = await paths.sessionsPath()
   const archiveDir = await tauriJoin(await paths.archivePath(), 'sessions')
+  await mkdir(archiveDir, { recursive: true })
   for (const id of sessionIds) {
     const src = await tauriJoin(sessionsDir, `${id}.md`)
     const dest = await tauriJoin(archiveDir, `${id}.md`)
     await rename(src, dest)
+  }
+}
+
+export async function archiveOldSessions(olderThanDays: number = 30): Promise<void> {
+  const { readDir, stat, rename, mkdir, exists } = await tauriFs()
+  const paths = await tauriPaths()
+  const sessionsDir = await paths.sessionsPath()
+
+  try {
+    const dirExists = await exists(sessionsDir)
+    if (!dirExists) return
+  } catch {
+    return
+  }
+
+  const entries = await readDir(sessionsDir)
+  const cutoff = Date.now() - olderThanDays * 24 * 60 * 60 * 1000
+  const archiveDir = await tauriJoin(await paths.archivePath(), 'sessions')
+  let archiveDirCreated = false
+
+  for (const entry of entries) {
+    if (!entry.name || !entry.name.endsWith('.md')) continue
+    try {
+      const filePath = await tauriJoin(sessionsDir, entry.name)
+      const info = await stat(filePath)
+      const mtime = info.mtime ? new Date(info.mtime).getTime() : Date.now()
+      if (mtime < cutoff) {
+        if (!archiveDirCreated) {
+          await mkdir(archiveDir, { recursive: true })
+          archiveDirCreated = true
+        }
+        const dest = await tauriJoin(archiveDir, entry.name)
+        await rename(filePath, dest)
+      }
+    } catch {
+      // Skip files that can't be stat'd or moved
+    }
   }
 }
