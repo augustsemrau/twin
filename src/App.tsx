@@ -15,6 +15,9 @@ import { DispatchBar } from '@/components/DispatchBar'
 import { DispatchView } from '@/components/DispatchView'
 import { BriefPreview } from '@/components/BriefPreview'
 import { SessionBanner } from '@/components/SessionBanner'
+import { SessionEndModal } from '@/components/SessionEndModal'
+import { ConversationImport } from '@/components/ConversationImport'
+import { ConversationNoteEditor } from '@/components/ConversationNoteEditor'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useSessionTracker } from '@/hooks/useSessionTracker'
 import { seedTwinFolder } from '@/lib/seed'
@@ -35,8 +38,14 @@ function App() {
     reconcilerResult,
     startSession,
     markSessionDone,
+    updateWritebackPath,
     clearReconcilerResult,
   } = useSessionTracker()
+
+  // Overlay state for session end modal and conversation import
+  const [sessionEndModalId, setSessionEndModalId] = useState<string | null>(null)
+  const [conversationImportSessionId, setConversationImportSessionId] = useState<string | null>(null)
+  const [showConversationEditor, setShowConversationEditor] = useState(false)
 
   useEffect(() => {
     seedTwinFolder().then(() => setInitialized(true))
@@ -106,6 +115,46 @@ function App() {
     setLastDispatchedPack(null)
   }, [])
 
+  // Session end modal handlers
+  const handleSessionEndSave = useCallback((sessionId: string) => {
+    return (_summary: string, _flags: { decisions: boolean; tasks: boolean; nothing: boolean }) => {
+      markSessionDone(sessionId, 'session_end')
+      updateWritebackPath(sessionId, 'session_end')
+      setSessionEndModalId(null)
+      rebuild()
+    }
+  }, [markSessionDone, updateWritebackPath, rebuild])
+
+  const handleQuickSummary = useCallback((sessionId: string) => {
+    return (_summary: string) => {
+      markSessionDone(sessionId, 'quick_summary')
+      updateWritebackPath(sessionId, 'quick_summary')
+      rebuild()
+    }
+  }, [markSessionDone, updateWritebackPath, rebuild])
+
+  const handleClipboardImport = useCallback((sessionId: string) => {
+    return (_text: string) => {
+      // Open conversation import flow with clipboard text pre-filled
+      setConversationImportSessionId(sessionId)
+      updateWritebackPath(sessionId, 'clipboard')
+    }
+  }, [updateWritebackPath])
+
+  const handleConversationImportComplete = useCallback((sessionId: string) => {
+    return (_noteId: string) => {
+      markSessionDone(sessionId, 'full_import')
+      updateWritebackPath(sessionId, 'full_import')
+      setConversationImportSessionId(null)
+      rebuild()
+    }
+  }, [markSessionDone, updateWritebackPath, rebuild])
+
+  const handleConversationEditorSave = useCallback(() => {
+    setShowConversationEditor(false)
+    rebuild()
+  }, [rebuild])
+
   if (!initialized || loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -160,16 +209,13 @@ function App() {
                         ? reconcilerResult
                         : null
                     }
-                    onMarkDone={() => markSessionDone(session.session_id, null)}
-                    onImportConversation={() => {
-                      // TODO: Wire to conversation import flow
-                      console.log('Import conversation for session', session.session_id)
-                    }}
+                    onMarkDone={() => setSessionEndModalId(session.session_id)}
+                    onImportConversation={() => setConversationImportSessionId(session.session_id)}
                     onReviewDeltas={() => {
-                      // TODO: Wire to DeltaReview overlay
-                      console.log('Review deltas for session', session.session_id)
                       clearReconcilerResult()
                     }}
+                    onQuickSummary={handleQuickSummary(session.session_id)}
+                    onClipboardImport={handleClipboardImport(session.session_id)}
                   />
                 ))}
             </div>
@@ -232,8 +278,26 @@ function App() {
               {activeProjectSlug && activeSubView === 'notes' && graph && (
                 <ErrorBoundary>
                   <div>
-                    <h1 className="text-2xl font-bold text-gray-900 mb-4">Notes</h1>
-                    <ProjectNoteList projectSlug={activeProjectSlug} graph={graph} onGraphChanged={rebuild} />
+                    <div className="flex items-center justify-between mb-4">
+                      <h1 className="text-2xl font-bold text-gray-900">Notes</h1>
+                      <button
+                        type="button"
+                        onClick={() => setShowConversationEditor(true)}
+                        className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        New conversation note
+                      </button>
+                    </div>
+                    {showConversationEditor && graph ? (
+                      <ConversationNoteEditor
+                        projectSlug={activeProjectSlug}
+                        graph={graph}
+                        onSave={handleConversationEditorSave}
+                        onCancel={() => setShowConversationEditor(false)}
+                      />
+                    ) : (
+                      <ProjectNoteList projectSlug={activeProjectSlug} graph={graph} onGraphChanged={rebuild} />
+                    )}
                   </div>
                 </ErrorBoundary>
               )}
@@ -339,6 +403,31 @@ function App() {
             />
           </div>
         </div>
+      )}
+
+      {/* Session End Modal overlay */}
+      {sessionEndModalId && graph && (
+        <SessionEndModal
+          sessionId={sessionEndModalId}
+          projectSlug={activeProjectSlug}
+          graph={graph}
+          onSave={handleSessionEndSave(sessionEndModalId)}
+          onImportFull={() => {
+            setSessionEndModalId(null)
+            setConversationImportSessionId(sessionEndModalId)
+          }}
+          onCancel={() => setSessionEndModalId(null)}
+        />
+      )}
+
+      {/* Conversation Import overlay */}
+      {conversationImportSessionId && graph && (
+        <ConversationImport
+          graph={graph}
+          projects={projects}
+          onComplete={handleConversationImportComplete(conversationImportSessionId)}
+          onCancel={() => setConversationImportSessionId(null)}
+        />
       )}
     </ErrorBoundary>
   )

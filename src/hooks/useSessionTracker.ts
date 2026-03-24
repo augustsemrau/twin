@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react'
 import type { ContextPack, ActiveSession } from '@/types/sessions'
 import type { ReconcilerOutput } from '@/types/agents'
 
+export type WritebackPath = 'session_end' | 'clipboard' | 'quick_summary' | 'full_import' | null
+
 export function useSessionTracker() {
   const [activeSessions, setActiveSessions] = useState<ActiveSession[]>([])
   const [reconcilerResult, setReconcilerResult] = useState<ReconcilerOutput | null>(null)
@@ -24,7 +26,21 @@ export function useSessionTracker() {
     ))
   }, [])
 
+  const updateWritebackPath = useCallback((sessionId: string, path: WritebackPath) => {
+    setActiveSessions(prev => prev.map(s =>
+      s.session_id === sessionId ? { ...s, writeback_path: path } : s
+    ))
+  }, [])
+
   const clearReconcilerResult = useCallback(() => setReconcilerResult(null), [])
 
-  return { activeSessions, reconcilerResult, startSession, markSessionDone, setReconcilerResult, clearReconcilerResult }
+  return {
+    activeSessions,
+    reconcilerResult,
+    startSession,
+    markSessionDone,
+    updateWritebackPath,
+    setReconcilerResult,
+    clearReconcilerResult,
+  }
 }
