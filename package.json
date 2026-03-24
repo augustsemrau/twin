@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
     "@antv/g6": "^5.0.51",
     "@leeoniya/ufuzzy": "^1.0.19",
     "@tauri-apps/api": "^2",

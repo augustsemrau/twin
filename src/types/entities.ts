@@ -1,4 +1,5 @@
 import type { ULID, ISODate, ISOTimestamp, NoteType, TaskStatus, DeliveryType, DeliveryStatus, DecisionStatus, QuestionStatus } from './common'
+import type { ResolverOutput } from './agents'
 
 export type EntityRef = {
   file: string
@@ -124,7 +125,7 @@ export type InboxItem = {
   filename: string
   captured: ISOTimestamp
   raw: string
-  resolver_output?: unknown
+  resolver_output?: ResolverOutput
   resolver_error?: string
 }
 
