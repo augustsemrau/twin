@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useWorkGraph } from '@/hooks/useWorkGraph'
 import { Sidebar } from '@/components/Sidebar'
 import { GraphView } from '@/components/GraphView'
+import { CaptureStrip } from '@/components/CaptureStrip'
 import { seedTwinFolder } from '@/lib/seed'
 import type { ProjectEntity } from '@/types/entities'
 import './App.css'
@@ -9,7 +10,7 @@ import './App.css'
 function App() {
   const [initialized, setInitialized] = useState(false)
   const [activeView, setActiveView] = useState('focus')
-  const { graph, loading, error } = useWorkGraph()
+  const { graph, loading, error, rebuild } = useWorkGraph()
 
   useEffect(() => {
     seedTwinFolder().then(() => setInitialized(true))
@@ -36,6 +37,11 @@ function App() {
 
   const projects = (graph?.entities.filter((e): e is ProjectEntity => e.kind === 'project') ?? [])
 
+  // Derive active project slug from view id (format: "project:<slug>")
+  const activeProjectSlug = activeView.startsWith('project:')
+    ? activeView.slice('project:'.length)
+    : undefined
+
   return (
     <div className="flex h-screen">
       <Sidebar
@@ -43,32 +49,37 @@ function App() {
         activeView={activeView}
         onNavigate={setActiveView}
       />
-      <main className="flex-1 p-6 bg-white overflow-auto">
-        {activeView === 'graph' && graph && (
-          <div className="h-full flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <h1 className="text-2xl font-bold text-gray-900">Work Graph</h1>
-              <p className="text-sm text-gray-500">
-                {graph.entities.length} entities, {graph.relationships.length} relationships
-              </p>
+      <main className="flex-1 flex flex-col bg-white">
+        <div className="flex-1 overflow-auto p-6">
+          {activeView === 'graph' && graph && (
+            <div className="h-full flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <h1 className="text-2xl font-bold text-gray-900">Work Graph</h1>
+                <p className="text-sm text-gray-500">
+                  {graph.entities.length} entities, {graph.relationships.length} relationships
+                </p>
+              </div>
+              <div className="flex-1 min-h-0">
+                <GraphView graph={graph} />
+              </div>
             </div>
-            <div className="flex-1 min-h-0">
-              <GraphView graph={graph} />
+          )}
+          {activeView === 'focus' && (
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Today's Focus</h1>
+              <p className="mt-2 text-gray-500">Coming in Phase 2...</p>
             </div>
-          </div>
-        )}
-        {activeView === 'focus' && (
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Today's Focus</h1>
-            <p className="mt-2 text-gray-500">Coming in Phase 2...</p>
-          </div>
-        )}
-        {activeView !== 'graph' && activeView !== 'focus' && (
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{activeView}</h1>
-            <p className="mt-2 text-gray-500">Coming soon...</p>
-          </div>
-        )}
+          )}
+          {activeView !== 'graph' && activeView !== 'focus' && (
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{activeView}</h1>
+              <p className="mt-2 text-gray-500">Coming soon...</p>
+            </div>
+          )}
+        </div>
+        <div className="p-4 border-t">
+          <CaptureStrip graph={graph} activeProject={activeProjectSlug} onCaptured={rebuild} />
+        </div>
       </main>
     </div>
   )
