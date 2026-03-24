@@ -10,6 +10,7 @@ import { InboxTriage } from '@/components/InboxTriage'
 import { ProjectTaskList } from '@/components/ProjectTaskList'
 import { ProjectDeliveryList } from '@/components/ProjectDeliveryList'
 import { ProjectNoteList } from '@/components/ProjectNoteList'
+import { FocusView } from '@/components/FocusView'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { seedTwinFolder } from '@/lib/seed'
 import { captureToInbox } from '@/lib/capture'
@@ -131,11 +132,12 @@ function App() {
                   </div>
                 </div>
               )}
-              {activeView === 'focus' && (
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Today's Focus</h1>
-                  <p className="mt-2 text-gray-500">Coming in Phase 2...</p>
-                </div>
+              {activeView === 'focus' && graph && (
+                <FocusView
+                  graph={graph}
+                  onGraphChanged={rebuild}
+                  inboxCount={inboxCount}
+                />
               )}
               {activeView === 'inbox' && graph && (
                 <ErrorBoundary>
