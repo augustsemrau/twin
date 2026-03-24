@@ -30,7 +30,7 @@ type NavItem = {
 }
 
 const navItems: NavItem[] = [
-  { id: 'focus', label: "Today's focus", enabled: false },
+  { id: 'focus', label: "Today's focus", enabled: true },
   { id: 'graph', label: 'Work graph', enabled: true },
   { id: 'inbox', label: 'Inbox', enabled: true },
   { id: 'dispatch', label: 'Dispatch', enabled: true },
