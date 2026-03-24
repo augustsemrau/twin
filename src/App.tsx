@@ -4,6 +4,9 @@ import { Sidebar } from '@/components/Sidebar'
 import { GraphView } from '@/components/GraphView'
 import { CaptureStrip } from '@/components/CaptureStrip'
 import { InboxTriage } from '@/components/InboxTriage'
+import { ProjectTaskList } from '@/components/ProjectTaskList'
+import { ProjectDeliveryList } from '@/components/ProjectDeliveryList'
+import { ProjectNoteList } from '@/components/ProjectNoteList'
 import { seedTwinFolder } from '@/lib/seed'
 import type { ProjectEntity } from '@/types/entities'
 import './App.css'
@@ -39,10 +42,13 @@ function App() {
 
   const projects = (graph?.entities.filter((e): e is ProjectEntity => e.kind === 'project') ?? [])
 
-  // Derive active project slug from view id (format: "project:<slug>")
+  // Derive active project slug from view id (format: "project:<slug>" or "project:<slug>:<sub>")
   const activeProjectSlug = activeView.startsWith('project:')
-    ? activeView.slice('project:'.length)
+    ? activeView.split(':')[1]
     : undefined
+  const activeSubView = activeView.startsWith('project:')
+    ? activeView.split(':')[2] ?? null
+    : null
 
   return (
     <div className="flex h-screen">
@@ -51,6 +57,7 @@ function App() {
         activeView={activeView}
         onNavigate={setActiveView}
         inboxCount={inboxCount}
+        graph={graph}
       />
       <main className="flex-1 flex flex-col bg-white">
         <div className="flex-1 overflow-auto p-6">
@@ -80,7 +87,43 @@ function App() {
               onCountChanged={setInboxCount}
             />
           )}
-          {activeView !== 'graph' && activeView !== 'focus' && activeView !== 'inbox' && (
+          {activeProjectSlug && activeSubView === 'tasks' && graph && (
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-4">Tasks</h1>
+              <ProjectTaskList projectSlug={activeProjectSlug} graph={graph} onGraphChanged={rebuild} />
+            </div>
+          )}
+          {activeProjectSlug && activeSubView === 'deliveries' && graph && (
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-4">Deliveries</h1>
+              <ProjectDeliveryList projectSlug={activeProjectSlug} graph={graph} onGraphChanged={rebuild} />
+            </div>
+          )}
+          {activeProjectSlug && activeSubView === 'notes' && graph && (
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-4">Notes</h1>
+              <ProjectNoteList projectSlug={activeProjectSlug} graph={graph} onGraphChanged={rebuild} />
+            </div>
+          )}
+          {activeProjectSlug && activeSubView === 'graph' && graph && (
+            <div className="h-full flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <h1 className="text-2xl font-bold text-gray-900">Project Graph</h1>
+              </div>
+              <div className="flex-1 min-h-0">
+                <GraphView graph={graph} />
+              </div>
+            </div>
+          )}
+          {activeProjectSlug && !activeSubView && (
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {activeProjectSlug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+              </h1>
+              <p className="mt-2 text-gray-500">Select a view from the sidebar.</p>
+            </div>
+          )}
+          {!activeProjectSlug && activeView !== 'graph' && activeView !== 'focus' && activeView !== 'inbox' && (
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{activeView}</h1>
               <p className="mt-2 text-gray-500">Coming soon...</p>

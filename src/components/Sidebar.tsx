@@ -4,13 +4,15 @@
  * Shows navigation items and a dynamic project list from the work graph.
  */
 
-import type { ProjectEntity } from '@/types/entities'
+import type { ProjectEntity, TaskEntity, DeliveryEntity, NoteEntity } from '@/types/entities'
+import type { WorkGraph } from '@/types/graph'
 
 type SidebarProps = {
   projects: ProjectEntity[]
   activeView: string
   onNavigate: (view: string) => void
   inboxCount?: number
+  graph?: WorkGraph | null
 }
 
 type NavItem = {
@@ -25,7 +27,26 @@ const navItems: NavItem[] = [
   { id: 'inbox', label: 'Inbox', enabled: true },
 ]
 
-export function Sidebar({ projects, activeView, onNavigate, inboxCount }: SidebarProps) {
+type ProjectSubItem = {
+  id: string
+  label: string
+  count: number
+}
+
+function getProjectSubItems(slug: string, graph?: WorkGraph | null): ProjectSubItem[] {
+  if (!graph) return []
+  const tasks = graph.entities.filter((e): e is TaskEntity => e.kind === 'task' && e.project === slug)
+  const deliveries = graph.entities.filter((e): e is DeliveryEntity => e.kind === 'delivery' && e.project === slug)
+  const notes = graph.entities.filter((e): e is NoteEntity => e.kind === 'note' && e.project === slug)
+  return [
+    { id: 'tasks', label: 'Tasks', count: tasks.length },
+    { id: 'deliveries', label: 'Deliveries', count: deliveries.length },
+    { id: 'notes', label: 'Notes', count: notes.length },
+    { id: 'graph', label: 'Graph', count: 0 },
+  ]
+}
+
+export function Sidebar({ projects, activeView, onNavigate, inboxCount, graph }: SidebarProps) {
   return (
     <aside className="flex flex-col w-64 h-screen bg-slate-900 text-slate-300 text-sm select-none">
       {/* Header */}
@@ -70,19 +91,44 @@ export function Sidebar({ projects, activeView, onNavigate, inboxCount }: Sideba
         </div>
         {projects.map((project) => {
           const viewId = `project:${project.slug}`
-          const isActive = activeView === viewId
+          const isProjectActive = activeView.startsWith(viewId)
+          const subItems = isProjectActive ? getProjectSubItems(project.slug, graph) : []
           return (
-            <button
-              key={project.slug}
-              onClick={() => onNavigate(viewId)}
-              className={`
-                w-full text-left px-3 py-1.5 rounded-md transition-colors cursor-pointer
-                ${isActive ? 'bg-slate-700 text-white' : 'hover:bg-slate-800 hover:text-white'}
-              `}
-            >
-              <span className={`inline-block w-2 h-2 rounded-full mr-2 align-middle ${isActive ? 'bg-blue-400' : 'bg-slate-600'}`} />
-              <span className="truncate">{project.name}</span>
-            </button>
+            <div key={project.slug}>
+              <button
+                onClick={() => onNavigate(viewId)}
+                className={`
+                  w-full text-left px-3 py-1.5 rounded-md transition-colors cursor-pointer
+                  ${isProjectActive ? 'bg-slate-700 text-white' : 'hover:bg-slate-800 hover:text-white'}
+                `}
+              >
+                <span className={`inline-block w-2 h-2 rounded-full mr-2 align-middle ${isProjectActive ? 'bg-blue-400' : 'bg-slate-600'}`} />
+                <span className="truncate">{project.name}</span>
+              </button>
+              {isProjectActive && subItems.length > 0 && (
+                <div className="ml-4 mt-0.5 space-y-0.5">
+                  {subItems.map((sub) => {
+                    const subViewId = `project:${project.slug}:${sub.id}`
+                    const isSubActive = activeView === subViewId
+                    return (
+                      <button
+                        key={sub.id}
+                        onClick={() => onNavigate(subViewId)}
+                        className={`
+                          w-full text-left px-3 py-1 rounded-md text-sm transition-colors cursor-pointer
+                          ${isSubActive ? 'bg-slate-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
+                        `}
+                      >
+                        {sub.label}
+                        {sub.count > 0 && (
+                          <span className="ml-1 text-xs text-slate-500">({sub.count})</span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           )
         })}
 
