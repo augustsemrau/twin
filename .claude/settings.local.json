@@ -18,7 +18,9 @@
       "Bash(pnpm add:*)",
       "Bash(pnpm list:*)",
       "mcp__plugin_context7_context7__resolve-library-id",
-      "mcp__plugin_context7_context7__query-docs"
+      "mcp__plugin_context7_context7__query-docs",
+      "Bash(lsof -ti:1420)",
+      "Bash(xargs kill:*)"
     ]
   }
 }
