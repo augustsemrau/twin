@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   parseTasks, parseDeliveries, parseDecisions, parsePeople, parseNotes,
   serializeTasks, serializeDeliveries, serializeDecisions, serializePeople,
+  parseInboxContent,
 } from './fs'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
@@ -81,6 +82,42 @@ describe('fs parsing', () => {
     expect(notes[0].type).toBe('thought')
     expect(notes[0].twin_synced).toBe(true)
     expect(notes[0].ref.file).toBe('projects/test-project/notes/2026-03-17-tech-stack-decision.md')
+  })
+})
+
+describe('parseInboxContent', () => {
+  it('parses basic inbox file with no resolver output', () => {
+    const content = `---\ncaptured: 2026-03-17T09:14:00\nraw: true\nsource: capture\n---\n\nThomas sent the cost estimate\n`
+    const item = parseInboxContent(content, 'test-capture.md')
+    expect(item.filename).toBe('test-capture.md')
+    expect(item.captured).toContain('2026-03-17')
+    expect(item.raw).toBe('Thomas sent the cost estimate')
+    expect(item.resolver_output).toBeUndefined()
+    expect(item.resolver_error).toBeUndefined()
+  })
+
+  it('parses inbox file with resolver_output in frontmatter', () => {
+    const resolverOutput = {
+      candidate_project: 'test-project',
+      confidence: 'medium',
+      proposed_observations: [],
+      suggested_note_type: 'thought',
+      suggested_note_title: 'Cost estimate received',
+    }
+    // The capture system double-JSON-stringifies: JSON.stringify(JSON.stringify(output))
+    const content = `---\ncaptured: 2026-03-17T09:14:00\nraw: true\nsource: capture\nresolver_output: ${JSON.stringify(JSON.stringify(resolverOutput))}\n---\n\nThomas sent the cost estimate\n`
+    const item = parseInboxContent(content, 'test-capture.md')
+    expect(item.resolver_output).toBeDefined()
+    expect(item.resolver_output!.candidate_project).toBe('test-project')
+    expect(item.resolver_output!.confidence).toBe('medium')
+    expect(item.resolver_output!.suggested_note_title).toBe('Cost estimate received')
+  })
+
+  it('parses inbox file with resolver_error in frontmatter', () => {
+    const content = `---\ncaptured: 2026-03-17T09:14:00\nraw: true\nsource: capture\nresolver_error: "API rate limit exceeded"\n---\n\nSome capture text\n`
+    const item = parseInboxContent(content, 'test-capture.md')
+    expect(item.resolver_error).toBe('API rate limit exceeded')
+    expect(item.resolver_output).toBeUndefined()
   })
 })
 

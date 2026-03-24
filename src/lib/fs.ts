@@ -17,8 +17,11 @@ import type {
   DecisionEntity,
   PersonEntity,
   NoteEntity,
+  InboxItem,
 } from '@/types/entities'
+import type { ResolverOutput } from '@/types/agents'
 import type { TaskStatus, DeliveryType, DeliveryStatus, DecisionStatus, NoteType } from '@/types/common'
+import matter from 'gray-matter'
 
 // ---------------------------------------------------------------------------
 // Pure parsing functions
@@ -339,6 +342,81 @@ export async function clearInbox(filename: string): Promise<void> {
   const paths = await tauriPaths()
   const path = await tauriJoin(await paths.inboxPath(), filename)
   await remove(path)
+}
+
+export async function readInboxItems(): Promise<InboxItem[]> {
+  const { readTextFile, readDir } = await tauriFs()
+  const paths = await tauriPaths()
+  const dir = await paths.inboxPath()
+  const entries = await readDir(dir)
+  const items: InboxItem[] = []
+
+  for (const entry of entries) {
+    if (!entry.name || !entry.name.endsWith('.md')) continue
+    const filePath = await tauriJoin(dir, entry.name)
+    const content = await readTextFile(filePath)
+    const item = parseInboxContent(content, entry.name)
+    items.push(item)
+  }
+
+  return items
+}
+
+export function parseInboxContent(content: string, filename: string): InboxItem {
+  const { data, content: body } = matter(content)
+
+  let resolverOutput: ResolverOutput | undefined
+  if (data.resolver_output) {
+    try {
+      // The capture system double-JSON-stringifies the output
+      const parsed = typeof data.resolver_output === 'string'
+        ? JSON.parse(data.resolver_output)
+        : data.resolver_output
+      resolverOutput = typeof parsed === 'string' ? JSON.parse(parsed) : parsed
+    } catch {
+      // If parsing fails, treat as no resolver output
+    }
+  }
+
+  let resolverError: string | undefined
+  if (data.resolver_error) {
+    try {
+      resolverError = typeof data.resolver_error === 'string'
+        ? JSON.parse(data.resolver_error)
+        : String(data.resolver_error)
+    } catch {
+      resolverError = String(data.resolver_error)
+    }
+  }
+
+  // gray-matter parses date-like strings into Date objects — convert back to string
+  let captured = ''
+  if (data.captured instanceof Date) {
+    captured = data.captured.toISOString()
+  } else if (data.captured != null) {
+    captured = String(data.captured)
+  }
+
+  return {
+    filename,
+    captured,
+    raw: body.trim(),
+    resolver_output: resolverOutput,
+    resolver_error: resolverError,
+  }
+}
+
+export async function writeNote(
+  projectSlug: string,
+  filename: string,
+  content: string,
+): Promise<void> {
+  const { writeTextFile, mkdir } = await tauriFs()
+  const paths = await tauriPaths()
+  const notesDir = await paths.projectNotesPath(projectSlug)
+  await mkdir(notesDir, { recursive: true })
+  const path = await tauriJoin(notesDir, filename)
+  await writeTextFile(path, content)
 }
 
 // --- CLAUDE.md generation ---

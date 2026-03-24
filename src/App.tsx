@@ -3,6 +3,7 @@ import { useWorkGraph } from '@/hooks/useWorkGraph'
 import { Sidebar } from '@/components/Sidebar'
 import { GraphView } from '@/components/GraphView'
 import { CaptureStrip } from '@/components/CaptureStrip'
+import { InboxTriage } from '@/components/InboxTriage'
 import { seedTwinFolder } from '@/lib/seed'
 import type { ProjectEntity } from '@/types/entities'
 import './App.css'
@@ -10,6 +11,7 @@ import './App.css'
 function App() {
   const [initialized, setInitialized] = useState(false)
   const [activeView, setActiveView] = useState('focus')
+  const [inboxCount, setInboxCount] = useState(0)
   const { graph, loading, error, rebuild } = useWorkGraph()
 
   useEffect(() => {
@@ -48,6 +50,7 @@ function App() {
         projects={projects}
         activeView={activeView}
         onNavigate={setActiveView}
+        inboxCount={inboxCount}
       />
       <main className="flex-1 flex flex-col bg-white">
         <div className="flex-1 overflow-auto p-6">
@@ -70,7 +73,14 @@ function App() {
               <p className="mt-2 text-gray-500">Coming in Phase 2...</p>
             </div>
           )}
-          {activeView !== 'graph' && activeView !== 'focus' && (
+          {activeView === 'inbox' && graph && (
+            <InboxTriage
+              graph={graph}
+              onGraphChanged={rebuild}
+              onCountChanged={setInboxCount}
+            />
+          )}
+          {activeView !== 'graph' && activeView !== 'focus' && activeView !== 'inbox' && (
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{activeView}</h1>
               <p className="mt-2 text-gray-500">Coming soon...</p>

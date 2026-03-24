@@ -10,6 +10,7 @@ type SidebarProps = {
   projects: ProjectEntity[]
   activeView: string
   onNavigate: (view: string) => void
+  inboxCount?: number
 }
 
 type NavItem = {
@@ -21,10 +22,10 @@ type NavItem = {
 const navItems: NavItem[] = [
   { id: 'focus', label: "Today's focus", enabled: false },
   { id: 'graph', label: 'Work graph', enabled: true },
-  { id: 'inbox', label: 'Inbox', enabled: false },
+  { id: 'inbox', label: 'Inbox', enabled: true },
 ]
 
-export function Sidebar({ projects, activeView, onNavigate }: SidebarProps) {
+export function Sidebar({ projects, activeView, onNavigate, inboxCount }: SidebarProps) {
   return (
     <aside className="flex flex-col w-64 h-screen bg-slate-900 text-slate-300 text-sm select-none">
       {/* Header */}
@@ -52,6 +53,11 @@ export function Sidebar({ projects, activeView, onNavigate }: SidebarProps) {
             >
               <span className={`inline-block w-2 h-2 rounded-full mr-2 align-middle ${isActive ? 'bg-blue-400' : 'bg-slate-600'}`} />
               {item.label}
+              {item.id === 'inbox' && inboxCount != null && inboxCount > 0 && (
+                <span className="ml-auto rounded-full bg-blue-500 px-1.5 py-0.5 text-xs font-medium text-white leading-none">
+                  {inboxCount}
+                </span>
+              )}
             </button>
           )
         })}
