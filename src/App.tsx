@@ -18,6 +18,8 @@ import { SessionBanner } from '@/components/SessionBanner'
 import { SessionEndModal } from '@/components/SessionEndModal'
 import { ConversationImport } from '@/components/ConversationImport'
 import { ConversationNoteEditor } from '@/components/ConversationNoteEditor'
+import { NoteEditor } from '@/components/NoteEditor'
+import { DecisionList } from '@/components/DecisionList'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useSessionTracker } from '@/hooks/useSessionTracker'
 import { seedTwinFolder } from '@/lib/seed'
@@ -177,11 +179,17 @@ function App() {
   const projects = (graph?.entities.filter((e): e is ProjectEntity => e.kind === 'project') ?? [])
 
   // Derive active project slug from view id (format: "project:<slug>" or "project:<slug>:<sub>")
+  // Also handle "note:<slug>:<filename>" for the note editor
   const activeProjectSlug = activeView.startsWith('project:')
     ? activeView.split(':')[1]
-    : undefined
+    : activeView.startsWith('note:')
+      ? activeView.split(':')[1]
+      : undefined
   const activeSubView = activeView.startsWith('project:')
     ? activeView.split(':')[2] ?? null
+    : null
+  const activeNoteFilename = activeView.startsWith('note:')
+    ? activeView.split(':').slice(2).join(':') ?? null
     : null
 
   return (
@@ -296,9 +304,34 @@ function App() {
                         onCancel={() => setShowConversationEditor(false)}
                       />
                     ) : (
-                      <ProjectNoteList projectSlug={activeProjectSlug} graph={graph} onGraphChanged={rebuild} />
+                      <ProjectNoteList
+                        projectSlug={activeProjectSlug}
+                        graph={graph}
+                        onGraphChanged={rebuild}
+                        onOpenNote={(filename) => setActiveView(`note:${activeProjectSlug}:${filename}`)}
+                      />
                     )}
                   </div>
+                </ErrorBoundary>
+              )}
+              {activeProjectSlug && activeSubView === 'decisions' && graph && (
+                <ErrorBoundary>
+                  <DecisionList
+                    projectSlug={activeProjectSlug}
+                    graph={graph}
+                    onGraphChanged={rebuild}
+                  />
+                </ErrorBoundary>
+              )}
+              {activeNoteFilename && activeProjectSlug && graph && (
+                <ErrorBoundary>
+                  <NoteEditor
+                    projectSlug={activeProjectSlug}
+                    noteFilename={activeNoteFilename}
+                    graph={graph}
+                    onSave={rebuild}
+                    onBack={() => setActiveView(`project:${activeProjectSlug}:notes`)}
+                  />
                 </ErrorBoundary>
               )}
               {activeProjectSlug && activeSubView === 'graph' && graph && (

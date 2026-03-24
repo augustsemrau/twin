@@ -16,9 +16,10 @@ interface ProjectNoteListProps {
   projectSlug: string
   graph: WorkGraph
   onGraphChanged: () => void
+  onOpenNote?: (filename: string) => void
 }
 
-export function ProjectNoteList({ projectSlug, graph, onGraphChanged }: ProjectNoteListProps) {
+export function ProjectNoteList({ projectSlug, graph, onGraphChanged, onOpenNote }: ProjectNoteListProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [toggling, setToggling] = useState<string | null>(null)
 
@@ -67,7 +68,13 @@ export function ProjectNoteList({ projectSlug, graph, onGraphChanged }: ProjectN
       {notes.map((note) => (
         <div
           key={note.id}
-          onClick={() => setSelectedId(note.id === selectedId ? null : note.id)}
+          onClick={() => {
+            if (onOpenNote) {
+              onOpenNote(note.filename)
+            } else {
+              setSelectedId(note.id === selectedId ? null : note.id)
+            }
+          }}
           className={`border rounded-lg p-4 cursor-pointer transition-colors ${
             note.id === selectedId
               ? 'border-blue-400 bg-blue-50'

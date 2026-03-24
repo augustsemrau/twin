@@ -4,7 +4,7 @@
  * Shows navigation items and a dynamic project list from the work graph.
  */
 
-import type { ProjectEntity, TaskEntity, DeliveryEntity, NoteEntity } from '@/types/entities'
+import type { ProjectEntity, TaskEntity, DeliveryEntity, NoteEntity, DecisionEntity } from '@/types/entities'
 import type { WorkGraph } from '@/types/graph'
 import { ApiStatus } from './ApiStatus'
 
@@ -40,10 +40,12 @@ function getProjectSubItems(slug: string, graph?: WorkGraph | null): ProjectSubI
   const tasks = graph.entities.filter((e): e is TaskEntity => e.kind === 'task' && e.project === slug)
   const deliveries = graph.entities.filter((e): e is DeliveryEntity => e.kind === 'delivery' && e.project === slug)
   const notes = graph.entities.filter((e): e is NoteEntity => e.kind === 'note' && e.project === slug)
+  const decisions = graph.entities.filter((e): e is DecisionEntity => e.kind === 'decision' && e.project === slug)
   return [
     { id: 'tasks', label: 'Tasks', count: tasks.length },
     { id: 'deliveries', label: 'Deliveries', count: deliveries.length },
     { id: 'notes', label: 'Notes', count: notes.length },
+    { id: 'decisions', label: 'Decisions', count: decisions.length },
     { id: 'graph', label: 'Graph', count: 0 },
   ]
 }
