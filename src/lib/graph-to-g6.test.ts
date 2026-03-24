@@ -22,10 +22,10 @@ describe('workGraphToG6', () => {
   it('maps task status to correct fill colour', () => {
     const graph: WorkGraph = {
       entities: [
-        { kind: 'task', id: '01A', title: 'Todo', status: 'todo', priority: 1, project: 'p', ref: { file: '' } },
-        { kind: 'task', id: '01B', title: 'In Progress', status: 'in_progress', priority: 1, project: 'p', ref: { file: '' } },
-        { kind: 'task', id: '01C', title: 'Blocked', status: 'blocked', priority: 1, blocked_by: 'X', project: 'p', ref: { file: '' } },
-        { kind: 'task', id: '01D', title: 'Done', status: 'done', priority: 1, project: 'p', ref: { file: '' } },
+        { kind: 'task', id: '01A', title: 'Todo', status: 'todo', priority: 'high', project: 'p', ref: { file: '' } },
+        { kind: 'task', id: '01B', title: 'In Progress', status: 'in_progress', priority: 'high', project: 'p', ref: { file: '' } },
+        { kind: 'task', id: '01C', title: 'Blocked', status: 'blocked', priority: 'high', blocked_by: 'X', project: 'p', ref: { file: '' } },
+        { kind: 'task', id: '01D', title: 'Done', status: 'done', priority: 'high', project: 'p', ref: { file: '' } },
       ],
       relationships: [],
       built_at: Date.now(),
@@ -80,7 +80,7 @@ describe('workGraphToG6', () => {
     const graph: WorkGraph = {
       entities: [
         { kind: 'project', slug: 'proj', name: 'P', status: 'active', ref: { file: '' } },
-        { kind: 'task', id: '01A', title: 'T', status: 'todo', priority: 1, project: 'proj', ref: { file: '' } },
+        { kind: 'task', id: '01A', title: 'T', status: 'todo', priority: 'high', project: 'proj', ref: { file: '' } },
       ],
       relationships: [],
       built_at: Date.now(),
@@ -93,8 +93,8 @@ describe('workGraphToG6', () => {
   it('maps edge types to correct styles', () => {
     const graph: WorkGraph = {
       entities: [
-        { kind: 'task', id: 'a', title: 'A', status: 'todo', priority: 1, project: 'p', ref: { file: '' } },
-        { kind: 'task', id: 'b', title: 'B', status: 'blocked', priority: 1, blocked_by: 'a', project: 'p', ref: { file: '' } },
+        { kind: 'task', id: 'a', title: 'A', status: 'todo', priority: 'high', project: 'p', ref: { file: '' } },
+        { kind: 'task', id: 'b', title: 'B', status: 'blocked', priority: 'high', blocked_by: 'a', project: 'p', ref: { file: '' } },
       ],
       relationships: [
         { from: { kind: 'task', id: 'a' }, to: { kind: 'task', id: 'b' }, type: 'blocks' },
@@ -114,8 +114,8 @@ describe('workGraphToG6', () => {
   it('maps dashed edge styles correctly', () => {
     const graph: WorkGraph = {
       entities: [
-        { kind: 'task', id: 'a', title: 'A', status: 'done', priority: 1, project: 'p', ref: { file: '' } },
-        { kind: 'task', id: 'b', title: 'B', status: 'todo', priority: 1, project: 'p', ref: { file: '' } },
+        { kind: 'task', id: 'a', title: 'A', status: 'done', priority: 'high', project: 'p', ref: { file: '' } },
+        { kind: 'task', id: 'b', title: 'B', status: 'todo', priority: 'high', project: 'p', ref: { file: '' } },
       ],
       relationships: [
         { from: { kind: 'task', id: 'a' }, to: { kind: 'task', id: 'b' }, type: 'unblocks' },
@@ -132,7 +132,7 @@ describe('workGraphToG6', () => {
     const graph: WorkGraph = {
       entities: [
         { kind: 'project', slug: 'p', name: 'P', status: 'active', ref: { file: '' } },
-        { kind: 'task', id: '01A', title: 'T', status: 'todo', priority: 1, project: 'p', ref: { file: '' } },
+        { kind: 'task', id: '01A', title: 'T', status: 'todo', priority: 'high', project: 'p', ref: { file: '' } },
       ],
       relationships: [
         { from: { kind: 'task', id: '01A' }, to: { kind: 'project', id: 'p' }, type: 'belongs_to' },
@@ -147,7 +147,7 @@ describe('workGraphToG6', () => {
   it('extracts correct labels from different entity kinds', () => {
     const graph: WorkGraph = {
       entities: [
-        { kind: 'task', id: 't1', title: 'My Task', status: 'todo', priority: 1, project: 'p', ref: { file: '' } },
+        { kind: 'task', id: 't1', title: 'My Task', status: 'todo', priority: 'high', project: 'p', ref: { file: '' } },
         { kind: 'person', id: 'p1', name: 'Alice', projects: [], ref: { file: '' } },
         { kind: 'note', id: 'n1', filename: 'note.md', title: 'My Note', type: 'thought', twin_synced: false, people: [], ref: { file: '' } },
         { kind: 'delivery', id: 'd1', slug: 'del', title: 'My Delivery', type: 'doc', status: 'draft', project: 'p', ref: { file: '' } },
@@ -170,7 +170,7 @@ describe('workGraphToG6', () => {
   it('sets correct node types for entity kinds', () => {
     const graph: WorkGraph = {
       entities: [
-        { kind: 'task', id: 't1', title: 'T', status: 'todo', priority: 1, project: 'p', ref: { file: '' } },
+        { kind: 'task', id: 't1', title: 'T', status: 'todo', priority: 'high', project: 'p', ref: { file: '' } },
         { kind: 'delivery', id: 'd1', slug: 'del', title: 'D', type: 'doc', status: 'draft', project: 'p', ref: { file: '' } },
         { kind: 'decision', id: 'dc1', title: 'Dec', decision: 'yes', unblocks: [], date: '2024-01-01', project: 'p', status: 'active', ref: { file: '' } },
         { kind: 'note', id: 'n1', filename: 'n.md', title: 'N', type: 'thought', twin_synced: false, people: [], ref: { file: '' } },
@@ -208,8 +208,8 @@ describe('workGraphToG6', () => {
   it('maps all edge relationship types', () => {
     const graph: WorkGraph = {
       entities: [
-        { kind: 'task', id: 'a', title: 'A', status: 'todo', priority: 1, project: 'p', ref: { file: '' } },
-        { kind: 'task', id: 'b', title: 'B', status: 'todo', priority: 1, project: 'p', ref: { file: '' } },
+        { kind: 'task', id: 'a', title: 'A', status: 'todo', priority: 'high', project: 'p', ref: { file: '' } },
+        { kind: 'task', id: 'b', title: 'B', status: 'todo', priority: 'high', project: 'p', ref: { file: '' } },
       ],
       relationships: [
         { from: { kind: 'task', id: 'a' }, to: { kind: 'task', id: 'b' }, type: 'informs' },

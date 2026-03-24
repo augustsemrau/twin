@@ -19,7 +19,7 @@ export type TaskEntity = {
   id: ULID
   title: string
   status: TaskStatus
-  priority?: number
+  priority: 'high' | 'medium' | 'low'
   due_date?: ISODate
   blocked_by?: string
   waiting_on?: string

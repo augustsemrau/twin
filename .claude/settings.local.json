@@ -11,7 +11,14 @@
       "Bash(cargo --version)",
       "Bash(npm --version)",
       "Bash(pnpm --version)",
-      "Bash(rustup show:*)"
+      "Bash(rustup show:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm exec:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm list:*)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs"
     ]
   }
 }
