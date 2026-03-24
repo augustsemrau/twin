@@ -189,27 +189,48 @@ async function tauriJoin(...parts: string[]) {
 // --- Read functions ---
 
 export async function readTasks(projectSlug: string): Promise<TaskEntity[]> {
-  const { readTextFile } = await tauriFs()
+  const { readTextFile, exists } = await tauriFs()
   const paths = await tauriPaths()
   const path = await tauriJoin(await paths.projectPath(projectSlug), 'tasks.yaml')
-  const content = await readTextFile(path)
-  return parseTasks(content, projectSlug)
+  try {
+    const fileExists = await exists(path)
+    if (!fileExists) return []
+    const content = await readTextFile(path)
+    return parseTasks(content, projectSlug)
+  } catch (err) {
+    console.warn(`[fs] Could not read tasks.yaml for ${projectSlug}:`, err)
+    return []
+  }
 }
 
 export async function readDeliveries(projectSlug: string): Promise<DeliveryEntity[]> {
-  const { readTextFile } = await tauriFs()
+  const { readTextFile, exists } = await tauriFs()
   const paths = await tauriPaths()
   const path = await tauriJoin(await paths.projectPath(projectSlug), 'deliveries.yaml')
-  const content = await readTextFile(path)
-  return parseDeliveries(content, projectSlug)
+  try {
+    const fileExists = await exists(path)
+    if (!fileExists) return []
+    const content = await readTextFile(path)
+    return parseDeliveries(content, projectSlug)
+  } catch (err) {
+    console.warn(`[fs] Could not read deliveries.yaml for ${projectSlug}:`, err)
+    return []
+  }
 }
 
 export async function readDecisions(projectSlug: string): Promise<DecisionEntity[]> {
-  const { readTextFile } = await tauriFs()
+  const { readTextFile, exists } = await tauriFs()
   const paths = await tauriPaths()
   const path = await tauriJoin(await paths.projectPath(projectSlug), 'decisions.yaml')
-  const content = await readTextFile(path)
-  return parseDecisions(content, projectSlug)
+  try {
+    const fileExists = await exists(path)
+    if (!fileExists) return []
+    const content = await readTextFile(path)
+    return parseDecisions(content, projectSlug)
+  } catch (err) {
+    console.warn(`[fs] Could not read decisions.yaml for ${projectSlug}:`, err)
+    return []
+  }
 }
 
 export async function readActiveDecisions(projectSlug: string): Promise<DecisionEntity[]> {
@@ -250,34 +271,90 @@ export async function readNotes(projectSlug: string): Promise<NoteEntity[]> {
   return parseNotes(files, projectSlug)
 }
 
+// --- Mtime tracking for optimistic concurrency ---
+
+const _knownMtimes: Map<string, number> = new Map()
+
+/**
+ * Record the mtime of a file after reading it.
+ * Called after read operations that precede writes.
+ */
+export function trackMtime(path: string, mtime: number): void {
+  _knownMtimes.set(path, mtime)
+}
+
+/**
+ * Check if a file has been modified since we last read it.
+ * Returns true if there's a conflict (file was modified externally).
+ * Logs a warning if conflict detected; does not block the write.
+ */
+async function checkMtimeConflict(path: string): Promise<boolean> {
+  const knownMtime = _knownMtimes.get(path)
+  if (knownMtime == null) return false // No prior read recorded — no conflict possible
+
+  const currentMtime = await getMtime(path)
+  if (!currentMtime) return false
+
+  if (currentMtime.getTime() > knownMtime) {
+    console.warn(
+      `[fs] Concurrent edit detected: ${path} was modified since last read ` +
+      `(known: ${new Date(knownMtime).toISOString()}, current: ${currentMtime.toISOString()}). ` +
+      `Proceeding with write — the external change may be overwritten.`
+    )
+    return true
+  }
+  return false
+}
+
+/**
+ * Update the known mtime after a write operation.
+ */
+async function refreshMtime(path: string): Promise<void> {
+  const mtime = await getMtime(path)
+  if (mtime) {
+    _knownMtimes.set(path, mtime.getTime())
+  }
+}
+
+// Exported for testing
+export { _knownMtimes as __knownMtimes_for_testing }
+
 // --- Write functions ---
 
 export async function writeTasks(projectSlug: string, tasks: TaskEntity[]): Promise<void> {
   const { writeTextFile } = await tauriFs()
   const paths = await tauriPaths()
   const path = await tauriJoin(await paths.projectPath(projectSlug), 'tasks.yaml')
+  await checkMtimeConflict(path)
   await writeTextFile(path, serializeTasks(tasks))
+  await refreshMtime(path)
 }
 
 export async function writeDeliveries(projectSlug: string, deliveries: DeliveryEntity[]): Promise<void> {
   const { writeTextFile } = await tauriFs()
   const paths = await tauriPaths()
   const path = await tauriJoin(await paths.projectPath(projectSlug), 'deliveries.yaml')
+  await checkMtimeConflict(path)
   await writeTextFile(path, serializeDeliveries(deliveries))
+  await refreshMtime(path)
 }
 
 export async function writeDecisions(projectSlug: string, decisions: DecisionEntity[]): Promise<void> {
   const { writeTextFile } = await tauriFs()
   const paths = await tauriPaths()
   const path = await tauriJoin(await paths.projectPath(projectSlug), 'decisions.yaml')
+  await checkMtimeConflict(path)
   await writeTextFile(path, serializeDecisions(decisions))
+  await refreshMtime(path)
 }
 
 export async function writePeople(people: PersonEntity[]): Promise<void> {
   const { writeTextFile } = await tauriFs()
   const paths = await tauriPaths()
   const path = await paths.peoplePath()
+  await checkMtimeConflict(path)
   await writeTextFile(path, serializePeople(people))
+  await refreshMtime(path)
 }
 
 // --- Decision helpers ---

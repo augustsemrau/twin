@@ -35,7 +35,7 @@ function App() {
   const [showDispatchBar, setShowDispatchBar] = useState(false)
   const [lastDispatchedPack, setLastDispatchedPack] = useState<ContextPack | null>(null)
   const [archivedProjects, setArchivedProjects] = useState<string[]>([])
-  const { graph, loading, error, rebuild } = useWorkGraph()
+  const { graph, loading, error, warnings, rebuild } = useWorkGraph()
   const {
     activeSessions,
     reconcilerResult,
@@ -306,6 +306,7 @@ function App() {
           onArchiveProject={handleArchiveProject}
           onRestoreProject={handleRestoreProject}
           archivedProjects={archivedProjects}
+          projectWarnings={warnings}
         />
         <main className="flex-1 flex flex-col bg-white">
           {/* Active session banners */}

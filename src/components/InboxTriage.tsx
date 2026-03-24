@@ -6,6 +6,7 @@ import type { DeltaOperation } from '@/types/deltas'
 import type { NoteType } from '@/types/common'
 import { readInboxItems, clearInbox, writeNote, writeTasks, writeDeliveries, writeDecisions, writePeople, readTasks, readDeliveries, readDecisions, readPeople } from '@/lib/fs'
 import { validateDeltas } from '@/lib/validator'
+import { markStaleForDelta } from '@/lib/claude-generator'
 import {
   applyCreateTask,
   applyUpdateTaskStatus,
@@ -133,6 +134,7 @@ export function InboxTriage({ graph, onGraphChanged, onCountChanged }: InboxTria
         default:
           break
       }
+      markStaleForDelta(delta)
     }
   }
 

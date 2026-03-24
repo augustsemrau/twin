@@ -8,6 +8,7 @@
 import { useState, useCallback } from 'react'
 import type { ProjectEntity, TaskEntity, DeliveryEntity, NoteEntity, DecisionEntity } from '@/types/entities'
 import type { WorkGraph } from '@/types/graph'
+import type { ProjectWarning } from '@/hooks/useWorkGraph'
 import { ApiStatus } from './ApiStatus'
 
 type SidebarProps = {
@@ -19,6 +20,7 @@ type SidebarProps = {
   onArchiveProject?: (slug: string) => void
   onRestoreProject?: (slug: string) => void
   archivedProjects?: string[]
+  projectWarnings?: ProjectWarning[]
 }
 
 type NavItem = {
@@ -65,6 +67,7 @@ export function Sidebar({
   onArchiveProject,
   onRestoreProject: _onRestoreProject,
   archivedProjects: _archivedProjects = [],
+  projectWarnings = [],
 }: SidebarProps) {
   void _onRestoreProject
   void _archivedProjects
@@ -124,6 +127,7 @@ export function Sidebar({
           const isProjectActive = activeView.startsWith(viewId)
           const subItems = isProjectActive ? getProjectSubItems(project.slug, graph) : []
           const showContextMenu = contextMenuSlug === project.slug
+          const hasWarnings = projectWarnings.some((w) => w.projectSlug === project.slug)
           return (
             <div key={project.slug} className="relative">
               <button
@@ -139,6 +143,12 @@ export function Sidebar({
               >
                 <span className={`inline-block w-2 h-2 rounded-full mr-2 align-middle ${isProjectActive ? 'bg-blue-400' : 'bg-slate-600'}`} />
                 <span className="truncate">{project.name}</span>
+                {hasWarnings && (
+                  <span
+                    className="ml-1 inline-block w-2 h-2 rounded-full bg-amber-400 align-middle"
+                    title={`Warning: some files could not be read (${projectWarnings.filter((w) => w.projectSlug === project.slug).map((w) => w.file).join(', ')})`}
+                  />
+                )}
                 {/* Archive button on hover */}
                 {onArchiveProject && (
                   <span

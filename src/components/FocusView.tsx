@@ -28,6 +28,7 @@ import {
   writePeople,
 } from '@/lib/fs'
 import { getTokenUsage } from '@/lib/anthropic-client'
+import { markStaleForDelta } from '@/lib/claude-generator'
 import { StatusBadge } from './StatusBadge'
 import { ProposalCard } from './ProposalCard'
 
@@ -196,6 +197,7 @@ export function FocusView({ graph, onGraphChanged, inboxCount }: FocusViewProps)
         break
     }
 
+    markStaleForDelta(delta)
     onGraphChanged()
   }
 

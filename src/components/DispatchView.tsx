@@ -12,6 +12,7 @@ import type { PlannerOutput } from '@/types/agents'
 import type { WorkGraphEntity } from '@/types/entities'
 import { runPlanner } from '@/lib/planner'
 import { buildContextPack, saveContextPack, getProjectEntities } from '@/lib/composer'
+import { regenerateIfStale } from '@/lib/claude-generator'
 import { writeProjectCLAUDE } from '@/lib/fs'
 import { globalClaudePath } from '@/lib/paths'
 import { SourceChecklist } from './SourceChecklist'
@@ -142,6 +143,11 @@ export function DispatchView({ graph, projectSlug, onDispatch }: DispatchViewPro
       const sources = projectEntities
         .filter((e) => 'id' in e && selectedSources.has((e as { id: string }).id))
         .map((e) => e.ref)
+
+      // Regenerate CLAUDE.md if stale before assembling the brief
+      if (projectSlug) {
+        await regenerateIfStale(projectSlug, graph)
+      }
 
       let globalContext = ''
       try {

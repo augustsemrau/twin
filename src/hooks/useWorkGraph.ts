@@ -19,10 +19,17 @@ import {
 import type { WorkGraph } from '@/types/graph'
 import type { WorkGraphEntity, ProjectEntity } from '@/types/entities'
 
+export type ProjectWarning = {
+  projectSlug: string
+  file: string
+  message: string
+}
+
 export function useWorkGraph() {
   const [graph, setGraph] = useState<WorkGraph | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
+  const [warnings, setWarnings] = useState<ProjectWarning[]>([])
 
   const build = useCallback(async () => {
     try {
@@ -31,6 +38,7 @@ export function useWorkGraph() {
 
       const slugs = await listProjects()
       const entities: WorkGraphEntity[] = []
+      const buildWarnings: ProjectWarning[] = []
 
       // Create project entities from discovered directories
       for (const slug of slugs) {
@@ -48,28 +56,36 @@ export function useWorkGraph() {
           const tasks = await readTasks(slug)
           entities.push(...tasks)
         } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
           console.warn(`[useWorkGraph] Could not read tasks for ${slug}:`, err)
+          buildWarnings.push({ projectSlug: slug, file: 'tasks.yaml', message: msg })
         }
 
         try {
           const deliveries = await readDeliveries(slug)
           entities.push(...deliveries)
         } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
           console.warn(`[useWorkGraph] Could not read deliveries for ${slug}:`, err)
+          buildWarnings.push({ projectSlug: slug, file: 'deliveries.yaml', message: msg })
         }
 
         try {
           const decisions = await readDecisions(slug)
           entities.push(...decisions)
         } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
           console.warn(`[useWorkGraph] Could not read decisions for ${slug}:`, err)
+          buildWarnings.push({ projectSlug: slug, file: 'decisions.yaml', message: msg })
         }
 
         try {
           const notes = await readNotes(slug)
           entities.push(...notes)
         } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
           console.warn(`[useWorkGraph] Could not read notes for ${slug}:`, err)
+          buildWarnings.push({ projectSlug: slug, file: 'notes/', message: msg })
         }
       }
 
@@ -83,6 +99,7 @@ export function useWorkGraph() {
 
       const workGraph = buildGraphFromEntities(entities)
       setGraph(workGraph)
+      setWarnings(buildWarnings)
     } catch (err) {
       console.error('[useWorkGraph] Build failed:', err)
       setError(err instanceof Error ? err : new Error(String(err)))
@@ -99,5 +116,5 @@ export function useWorkGraph() {
   // Rebuild on file changes
   useFileWatcher(build)
 
-  return { graph, loading, error, rebuild: build }
+  return { graph, loading, error, warnings, rebuild: build }
 }

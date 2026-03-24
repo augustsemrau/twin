@@ -12,6 +12,7 @@ import type { DispatchTarget } from '@/types/common'
 import type { TaskEntity, DeliveryEntity } from '@/types/entities'
 import { runPlanner } from '@/lib/planner'
 import { buildContextPack, saveContextPack } from '@/lib/composer'
+import { regenerateIfStale } from '@/lib/claude-generator'
 import { globalClaudePath } from '@/lib/paths'
 
 interface DispatchBarProps {
@@ -147,6 +148,11 @@ export function DispatchBar({ graph, projectSlug, onDispatch, onClose }: Dispatc
           target = 'cowork'
           if (action.context_sources.length > 0) sources = action.context_sources
         }
+      }
+
+      // Regenerate CLAUDE.md if stale before assembling the brief
+      if (projectSlug) {
+        await regenerateIfStale(projectSlug, graph)
       }
 
       let globalContext = ''
