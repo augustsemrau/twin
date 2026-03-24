@@ -1,4 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { register, unregister } from '@tauri-apps/plugin-global-shortcut'
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
+import { listen } from '@tauri-apps/api/event'
 import { useWorkGraph } from '@/hooks/useWorkGraph'
 import { Sidebar } from '@/components/Sidebar'
 import { GraphView } from '@/components/GraphView'
@@ -8,6 +11,7 @@ import { ProjectTaskList } from '@/components/ProjectTaskList'
 import { ProjectDeliveryList } from '@/components/ProjectDeliveryList'
 import { ProjectNoteList } from '@/components/ProjectNoteList'
 import { seedTwinFolder } from '@/lib/seed'
+import { captureToInbox } from '@/lib/capture'
 import type { ProjectEntity } from '@/types/entities'
 import './App.css'
 
@@ -20,6 +24,48 @@ function App() {
   useEffect(() => {
     seedTwinFolder().then(() => setInitialized(true))
   }, [])
+
+  // Keep refs to avoid re-registering the shortcut on every graph/view change
+  const graphRef = useRef(graph)
+  const activeViewRef = useRef(activeView)
+  useEffect(() => { graphRef.current = graph }, [graph])
+  useEffect(() => { activeViewRef.current = activeView }, [activeView])
+
+  // Register global shortcut (Cmd+Shift+Space) and listen for capture events
+  useEffect(() => {
+    let unlisten: (() => void) | null = null
+
+    async function setupShortcut() {
+      try {
+        await register('CommandOrControl+Shift+Space', async () => {
+          const captureWin = await WebviewWindow.getByLabel('capture')
+          if (captureWin) {
+            await captureWin.show()
+            await captureWin.setFocus()
+          }
+        })
+      } catch (err) {
+        console.warn('Failed to register global shortcut (Accessibility permission may be needed):', err)
+      }
+
+      unlisten = (await listen<{ text: string }>('capture-submitted', async (event) => {
+        const currentGraph = graphRef.current
+        if (currentGraph) {
+          const view = activeViewRef.current
+          const projectSlug = view.startsWith('project:') ? view.split(':')[1] : undefined
+          await captureToInbox(event.payload.text, currentGraph, projectSlug)
+          rebuild()
+        }
+      }))
+    }
+
+    setupShortcut()
+
+    return () => {
+      unlisten?.()
+      unregister('CommandOrControl+Shift+Space').catch(() => {})
+    }
+  }, [rebuild])
 
   if (!initialized || loading) {
     return (

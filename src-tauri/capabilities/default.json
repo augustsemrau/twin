@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Default capability for Twin",
-  "windows": ["main"],
+  "windows": ["main", "capture"],
   "permissions": [
     "core:default",
     "fs:default",
@@ -11,6 +11,9 @@
     "fs:allow-home-meta",
     "fs:allow-watch",
     "fs:allow-unwatch",
-    "shell:default"
+    "shell:default",
+    "global-shortcut:default",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister"
   ]
 }
