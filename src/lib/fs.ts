@@ -239,9 +239,15 @@ export async function readActiveDecisions(projectSlug: string): Promise<Decision
 }
 
 export async function readPeople(): Promise<PersonEntity[]> {
-  const { readTextFile } = await tauriFs()
+  const { readTextFile, exists } = await tauriFs()
   const paths = await tauriPaths()
   const path = await paths.peoplePath()
+  try {
+    const fileExists = await exists(path)
+    if (!fileExists) return []
+  } catch {
+    return []
+  }
   const content = await readTextFile(path)
   return parsePeople(content)
 }
@@ -454,11 +460,9 @@ export function parseInboxContent(content: string, filename: string): InboxItem 
   let resolverOutput: ResolverOutput | undefined
   if (data.resolver_output) {
     try {
-      // The capture system double-JSON-stringifies the output
-      const parsed = typeof data.resolver_output === 'string'
+      resolverOutput = typeof data.resolver_output === 'string'
         ? JSON.parse(data.resolver_output)
         : data.resolver_output
-      resolverOutput = typeof parsed === 'string' ? JSON.parse(parsed) : parsed
     } catch {
       // If parsing fails, treat as no resolver output
     }

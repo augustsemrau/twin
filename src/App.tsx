@@ -33,6 +33,7 @@ function App() {
   const [activeView, setActiveView] = useState('focus')
   const [inboxCount, setInboxCount] = useState(0)
   const [showDispatchBar, setShowDispatchBar] = useState(false)
+  const [dispatchObjective, setDispatchObjective] = useState('')
   const [lastDispatchedPack, setLastDispatchedPack] = useState<ContextPack | null>(null)
   const [archivedProjects, setArchivedProjects] = useState<string[]>([])
   const { graph, loading, error, warnings, rebuild } = useWorkGraph()
@@ -168,17 +169,8 @@ function App() {
 
   // GraphView dispatch/open handlers
   const handleDispatchFromEntity = useCallback((objective: string) => {
+    setDispatchObjective(objective)
     setActiveView('dispatch')
-    // The dispatch view will pick up the objective
-    // For now, open dispatch bar with pre-filled text
-    setShowDispatchBar(true)
-    // Store the objective so DispatchBar can use it
-    // We'll use a simple approach: navigate to dispatch view
-    setTimeout(() => {
-      setShowDispatchBar(false)
-      setActiveView('dispatch')
-    }, 0)
-    console.log('[GraphView] Dispatch from entity:', objective)
   }, [])
 
   const handleOpenEntity = useCallback((entityKind: string, entityId: string) => {
@@ -486,6 +478,7 @@ function App() {
                     graph={graph}
                     projectSlug={activeProjectSlug}
                     onDispatch={handleDispatch}
+                    initialObjective={dispatchObjective}
                   />
                 </ErrorBoundary>
               )}
@@ -565,6 +558,7 @@ function App() {
           projectSlug={activeProjectSlug}
           graph={graph}
           onSave={handleSessionEndSave(sessionEndModalId)}
+          onGraphChanged={rebuild}
           onImportFull={() => {
             setSessionEndModalId(null)
             setConversationImportSessionId(sessionEndModalId)

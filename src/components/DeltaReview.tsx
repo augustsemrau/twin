@@ -115,6 +115,12 @@ export function DeltaReview({
   const autoApplyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // Stable refs for timer callback — avoid restarting timer on parent re-renders
+  const observationsRef = useRef(observations)
+  observationsRef.current = observations
+  const onAcceptRef = useRef(onAccept)
+  onAcceptRef.current = onAccept
+
   // --- medium/low confidence state ---
   const [checked, setChecked] = useState<boolean[]>(() =>
     observations.map(() => confidence !== 'low')
@@ -137,14 +143,14 @@ export function DeltaReview({
     }, 1000)
 
     autoApplyTimerRef.current = setTimeout(() => {
-      onAccept(observations)
+      onAcceptRef.current(observationsRef.current)
     }, AUTO_APPLY_DELAY_MS)
 
     return () => {
       if (autoApplyTimerRef.current) clearTimeout(autoApplyTimerRef.current)
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current)
     }
-  }, [confidence, undone, observations, onAccept])
+  }, [confidence, undone])
 
   const handleUndo = () => {
     if (autoApplyTimerRef.current) clearTimeout(autoApplyTimerRef.current)

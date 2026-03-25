@@ -4,7 +4,7 @@
  * Flow: objective -> Plan -> review sources -> Generate Brief -> preview/copy.
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import type { WorkGraph } from '@/types/graph'
 import type { ContextPack } from '@/types/sessions'
 import type { DispatchTarget, Confidence } from '@/types/common'
@@ -23,6 +23,7 @@ interface DispatchViewProps {
   graph: WorkGraph
   projectSlug?: string
   onDispatch: (pack: ContextPack) => void
+  initialObjective?: string
 }
 
 type ViewState =
@@ -80,9 +81,18 @@ function confidenceColor(c: Confidence): string {
   }
 }
 
-export function DispatchView({ graph, projectSlug, onDispatch }: DispatchViewProps) {
+export function DispatchView({ graph, projectSlug, onDispatch, initialObjective }: DispatchViewProps) {
   const [state, setState] = useState<ViewState>({ step: 'objective' })
-  const [objective, setObjective] = useState('')
+  const [objective, setObjective] = useState(initialObjective ?? '')
+  const appliedInitialObjective = useRef(false)
+
+  // When initialObjective changes from outside, update the local state
+  useEffect(() => {
+    if (initialObjective && !appliedInitialObjective.current) {
+      appliedInitialObjective.current = true
+      setObjective(initialObjective)
+    }
+  }, [initialObjective])
   const [selectedTarget, setSelectedTarget] = useState<DispatchTarget>('chat')
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)

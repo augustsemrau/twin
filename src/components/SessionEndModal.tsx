@@ -1,14 +1,40 @@
 import { useState } from 'react'
 import type { WorkGraph } from '@/types/graph'
+import type { DeltaOperation } from '@/types/deltas'
 import type { ProposedObservation, ResolverOutput } from '@/types/agents'
 import { DeltaReview } from './DeltaReview'
 import { runResolver } from '@/lib/resolver'
+import { validateDeltas } from '@/lib/validator'
+import {
+  applyCreateTask,
+  applyUpdateTaskStatus,
+  applyMarkBlocked,
+  applyMarkUnblocked,
+  applyAppendDecision,
+  applySupersede,
+  applyCreateDelivery,
+  applyUpdateDeliveryStatus,
+  applyAddOpenQuestion,
+  applyUpsertPerson,
+} from '@/lib/state-updater'
+import {
+  readTasks,
+  readDeliveries,
+  readDecisions,
+  readPeople,
+  writeTasks,
+  writeDeliveries,
+  writeDecisions,
+  writePeople,
+} from '@/lib/fs'
+import { markStaleForDelta } from '@/lib/claude-generator'
 
 interface SessionEndModalProps {
   sessionId: string  // used by parent to identify which session
   projectSlug?: string
   graph: WorkGraph
   onSave: (summary: string, flags: { decisions: boolean; tasks: boolean; nothing: boolean }) => void
+  onGraphChanged: () => void
   onImportFull: () => void
   onCancel: () => void
 }
@@ -20,6 +46,7 @@ export function SessionEndModal({
   projectSlug,
   graph,
   onSave,
+  onGraphChanged,
   onImportFull,
   onCancel,
 }: SessionEndModalProps) {
@@ -67,10 +94,105 @@ export function SessionEndModal({
     }
   }
 
-  const handleAcceptDeltas = (selected: ProposedObservation[]) => {
-    // Caller handles applying deltas — pass summary and flags
-    // Selected observations are embedded in the summary context
-    void selected // deltas applied by parent via onSave
+  const applyDelta = async (delta: DeltaOperation) => {
+    switch (delta.op) {
+      case 'create_task': {
+        const t = await readTasks(delta.payload.project)
+        const updated = applyCreateTask(t, delta)
+        await writeTasks(delta.payload.project, updated)
+        break
+      }
+      case 'update_task_status': {
+        const t = await readTasks(delta.project)
+        const updated = applyUpdateTaskStatus(t, delta)
+        await writeTasks(delta.project, updated)
+        break
+      }
+      case 'mark_blocked': {
+        const t = await readTasks(delta.project)
+        const updated = applyMarkBlocked(t, delta)
+        await writeTasks(delta.project, updated)
+        break
+      }
+      case 'mark_unblocked': {
+        const t = await readTasks(delta.project)
+        const updated = applyMarkUnblocked(t, delta)
+        await writeTasks(delta.project, updated)
+        break
+      }
+      case 'append_decision': {
+        const d = await readDecisions(delta.payload.project)
+        const updated = applyAppendDecision(d, delta)
+        await writeDecisions(delta.payload.project, updated)
+        break
+      }
+      case 'supersede_decision': {
+        const d = await readDecisions(delta.project)
+        const updated = applySupersede(d, delta)
+        await writeDecisions(delta.project, updated)
+        break
+      }
+      case 'create_delivery': {
+        const dl = await readDeliveries(delta.payload.project)
+        const updated = applyCreateDelivery(dl, delta)
+        await writeDeliveries(delta.payload.project, updated)
+        break
+      }
+      case 'update_delivery_status': {
+        const dl = await readDeliveries(delta.project)
+        const updated = applyUpdateDeliveryStatus(dl, delta)
+        await writeDeliveries(delta.project, updated)
+        break
+      }
+      case 'add_open_question': {
+        applyAddOpenQuestion(delta)
+        break
+      }
+      case 'resolve_question': {
+        console.warn('[SessionEndModal] resolve_question delta not yet wired to file I/O')
+        break
+      }
+      case 'upsert_person': {
+        const p = await readPeople()
+        const updated = applyUpsertPerson(p, delta)
+        await writePeople(updated)
+        break
+      }
+      default:
+        break
+    }
+
+    markStaleForDelta(delta)
+  }
+
+  const handleAcceptDeltas = async (selected: ProposedObservation[]) => {
+    try {
+      const deltas = selected
+        .map((obs) => obs.proposed_delta)
+        .filter((d): d is DeltaOperation => d !== null)
+
+      if (deltas.length > 0) {
+        const validation = validateDeltas(deltas, graph)
+        if (!validation.valid) {
+          console.error('[SessionEndModal] Validation errors:', validation.errors)
+        }
+
+        // Apply only valid deltas (those not mentioned in errors)
+        const errorIds = new Set(
+          (validation.errors ?? []).map((e: { delta_index: number }) => e.delta_index),
+        )
+        for (let i = 0; i < deltas.length; i++) {
+          if (!errorIds.has(i)) {
+            await applyDelta(deltas[i])
+          }
+        }
+
+        onGraphChanged()
+      }
+    } catch (err) {
+      console.error('[SessionEndModal] Error applying deltas:', err)
+    }
+
     onSave(summary.trim(), { decisions, tasks, nothing })
   }
 

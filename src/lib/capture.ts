@@ -109,7 +109,7 @@ export async function captureToInbox(
     .then(async (output) => {
       try {
         await updateInboxFrontmatter(filename, {
-          resolver_output: JSON.stringify(serializeResolverOutput(output)),
+          resolver_output: serializeResolverOutput(output),
         })
       } catch (err) {
         console.warn('[capture] Could not write resolver_output to frontmatter:', err)

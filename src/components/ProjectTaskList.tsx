@@ -9,7 +9,7 @@ import { useState } from 'react'
 import { StatusBadge } from '@/components/StatusBadge'
 import { validateDeltas } from '@/lib/validator'
 import { applyUpdateTaskStatus } from '@/lib/state-updater'
-import { writeTasks } from '@/lib/fs'
+import { readTasks, writeTasks } from '@/lib/fs'
 import type { WorkGraph } from '@/types/graph'
 import type { TaskEntity } from '@/types/entities'
 import type { TaskStatus } from '@/types/common'
@@ -89,7 +89,8 @@ export function ProjectTaskList({ projectSlug, graph, onGraphChanged }: ProjectT
 
     setUpdating(taskId)
     try {
-      const updated = applyUpdateTaskStatus(allTasks, delta as Extract<DeltaOperation, { op: 'update_task_status' }>)
+      const currentTasks = await readTasks(projectSlug)
+      const updated = applyUpdateTaskStatus(currentTasks, delta as Extract<DeltaOperation, { op: 'update_task_status' }>)
       await writeTasks(projectSlug, updated)
       onGraphChanged()
     } catch (err) {
