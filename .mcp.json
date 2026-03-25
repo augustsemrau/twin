@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "tauri-mcp": {
+      "command": "node",
+      "args": ["node_modules/tauri-plugin-mcp-server/build/index.js"]
+    }
+  }
+}

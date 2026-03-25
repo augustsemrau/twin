@@ -1,3 +1,6 @@
+// MCP guest JS must load before React mounts (patches addEventListener)
+import 'tauri-plugin-mcp'
+
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
